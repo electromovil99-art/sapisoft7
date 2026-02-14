@@ -14,7 +14,7 @@
     "react-dom": "18.3.1",
     "lucide-react": "0.454.0",
     "@supabase/supabase-js": "2.45.1",
-    "@google/genai": "0.1.1",
+    "@google/genai": "^0.1.0",
     "@heliofi/checkout-react": "4.0.2",
     "react-markdown": "9.0.1",
     "socket.io-client": "4.7.4",
