@@ -145,7 +145,6 @@ const CashBoxManager: React.FC<{
         else onConfirm(physicalTotal, notes, manualBankBalances);
     };
 
-    // Robust print handling for sandboxed environment
     const handlePrintArqueo = () => {
         const content = document.getElementById('print-area-count')?.innerHTML;
         if (!content) return;
@@ -183,15 +182,12 @@ const CashBoxManager: React.FC<{
                 </html>
             `);
             win.document.close();
-        } else {
-            alert("Permita ventanas emergentes para imprimir");
         }
     };
 
     return (
         <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-2xl w-full max-w-[540px] overflow-hidden border border-slate-200 dark:border-slate-700 animate-in zoom-in-95 relative mx-auto my-2 flex flex-col max-h-[90vh]">
             
-            {/* MODAL DE IMPRESIÓN DE CONTEO */}
             {showPrintPreview && (
                 <div className="absolute inset-0 z-[150] bg-slate-900/90 backdrop-blur-md flex items-center justify-center p-4">
                     <div className="bg-white p-4 rounded-xl shadow-2xl max-h-full overflow-y-auto no-scrollbar flex flex-col gap-4">
@@ -247,7 +243,6 @@ const CashBoxManager: React.FC<{
                 </div>
             )}
 
-            {/* ... (Rest of CashBoxManager remains identical) ... */}
             {showAuditWarning && (
                 <div className="absolute inset-0 z-[100] bg-white/95 dark:bg-slate-900/95 backdrop-blur-md flex flex-col p-6 animate-in fade-in">
                     <div className="flex-1 flex flex-col items-center justify-center text-center">
@@ -594,9 +589,7 @@ export const CashModule: React.FC<CashModuleProps> = ({
             .a4-preview-container { width: 800px; transform-origin: top center; } .tabular-nums { font-variant-numeric: tabular-nums; } @media (max-width: 900px) { .a4-preview-container { transform: scale(0.7); } } @media (max-width: 600px) { .a4-preview-container { transform: scale(0.45); } }
         `}</style>
 
-        {/* ... (Existing grid cards and table remain unchanged) ... */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 shrink-0">
-            {/* ... Cards ... */}
              <div className="bg-white dark:bg-slate-800 px-4 py-3 rounded-2xl border border-slate-200 shadow-sm border-l-4 border-l-primary-500">
                 <div className="flex items-center justify-between mb-2 border-b pb-1.5 border-slate-50 dark:border-slate-700">
                     <span className="text-[11px] font-black text-slate-500 uppercase tracking-widest">Efectivo / Caja</span>
@@ -687,6 +680,142 @@ export const CashModule: React.FC<CashModuleProps> = ({
                 </div>
             </div>
         </div>
+
+        {/* MODAL INGRESO / GASTO */}
+      {(isIncomeModalOpen || isExpenseModalOpen) && (
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[2000] flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-800 w-full max-w-md rounded-[2.5rem] shadow-2xl border border-white/20 animate-in zoom-in-95 overflow-hidden flex flex-col">
+                 <div className={`p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center ${isIncomeModalOpen ? 'bg-emerald-50 dark:bg-emerald-900/20' : 'bg-orange-50 dark:bg-orange-900/20'}`}>
+                    <h3 className={`font-black text-sm uppercase tracking-widest flex items-center gap-2 ${isIncomeModalOpen ? 'text-emerald-700 dark:text-emerald-400' : 'text-orange-700 dark:text-orange-400'}`}>
+                        {isIncomeModalOpen ? <Plus size={18}/> : <Minus size={18}/>}
+                        Registrar {isIncomeModalOpen ? 'Ingreso' : 'Gasto'}
+                    </h3>
+                    <button onClick={() => { setIsIncomeModalOpen(false); setIsExpenseModalOpen(false); }} className="p-2 hover:bg-white/50 rounded-full transition-colors"><X size={18}/></button>
+                 </div>
+                 <div className="p-8 space-y-4">
+                     <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Monto ({systemBaseCurrency})</label>
+                        <input type="number" autoFocus className="w-full p-4 text-2xl font-black text-center bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-700 rounded-2xl outline-none focus:border-blue-500" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" />
+                     </div>
+                     
+                     <div className="space-y-1.5">
+                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Concepto / Detalle</label>
+                         <input type="text" className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl text-sm font-bold outline-none" value={concept} onChange={e => setConcept(e.target.value)} placeholder="Descripción..." />
+                     </div>
+
+                     <div className="grid grid-cols-2 gap-4">
+                         <div className="space-y-1.5">
+                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tipo Financiero</label>
+                             <select className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl text-xs font-bold outline-none" value={financialType} onChange={e => setFinancialType(e.target.value as any)}>
+                                 <option value="">-- Seleccionar --</option>
+                                 <option value="Fijo">Fijo (Recurrente)</option>
+                                 <option value="Variable">Variable (Ocasional)</option>
+                             </select>
+                         </div>
+                         <div className="space-y-1.5">
+                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Categoría</label>
+                             {financialType === 'Fijo' ? (
+                                 <select className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl text-xs font-bold outline-none" value={category} onChange={e => setCategory(e.target.value)}>
+                                     <option value="">-- Lista --</option>
+                                     {(isIncomeModalOpen ? fixedIncomeCategories : fixedExpenseCategories).map(c => <option key={c} value={c}>{c}</option>)}
+                                 </select>
+                             ) : (
+                                 <input type="text" className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl text-xs font-bold outline-none" value={category} onChange={e => setCategory(e.target.value)} placeholder="Ej. Taxis, Almuerzo..." />
+                             )}
+                         </div>
+                     </div>
+
+                     <div className="space-y-1.5">
+                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Método de Pago</label>
+                         <div className="grid grid-cols-2 gap-2">
+                            {['Efectivo', 'Transferencia', 'Yape', 'Tarjeta'].map(m => (
+                                <button 
+                                    key={m} 
+                                    onClick={() => setPaymentMethod(m as any)}
+                                    className={`py-2 rounded-xl text-[10px] font-black uppercase border-2 transition-all ${paymentMethod === m ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-400 border-slate-100 hover:border-slate-300'}`}
+                                >
+                                    {m}
+                                </button>
+                            ))}
+                         </div>
+                     </div>
+
+                     {paymentMethod !== 'Efectivo' && (
+                         <div className="space-y-3 p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-700 animate-in slide-in-from-top-2">
+                             <div>
+                                <label className="text-[9px] font-black text-slate-400 uppercase block mb-1">Cuenta Bancaria</label>
+                                <select className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg text-xs font-bold outline-none" value={bankAccountId} onChange={e => setBankAccountId(e.target.value)}>
+                                    <option value="">-- Seleccionar Banco --</option>
+                                    {bankAccounts.map(b => <option key={b.id} value={b.id}>{b.alias || b.bankName}</option>)}
+                                </select>
+                             </div>
+                             <div>
+                                <label className="text-[9px] font-black text-slate-400 uppercase block mb-1">Nro. Operación</label>
+                                <input type="text" className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg text-xs font-bold outline-none" value={operationNumber} onChange={e => setOperationNumber(e.target.value)} placeholder="Ref..." />
+                             </div>
+                         </div>
+                     )}
+
+                     <button onClick={() => handleSaveMovement(isIncomeModalOpen ? 'Ingreso' : 'Egreso')} className={`w-full py-4 mt-2 text-white font-black rounded-2xl uppercase text-xs tracking-widest shadow-xl active:scale-95 transition-all ${isIncomeModalOpen ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-orange-600 hover:bg-orange-700'}`}>
+                         Registrar {isIncomeModalOpen ? 'Ingreso' : 'Gasto'}
+                     </button>
+                 </div>
+            </div>
+        </div>
+      )}
+
+      {/* MODAL TRANSFERENCIA RÁPIDA */}
+      {isTransferModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[2000] flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-800 w-full max-w-md rounded-[2.5rem] shadow-2xl border border-white/20 animate-in zoom-in-95 overflow-hidden flex flex-col">
+                 <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-blue-50 dark:bg-blue-900/20 flex justify-between items-center">
+                    <h3 className="font-black text-sm uppercase tracking-widest text-blue-700 dark:text-blue-400 flex items-center gap-2">
+                        <ArrowRightLeft size={18}/> Transferencia Rápida
+                    </h3>
+                    <button onClick={() => setIsTransferModalOpen(false)} className="p-2 hover:bg-white/50 rounded-full transition-colors"><X size={18}/></button>
+                 </div>
+                 <div className="p-8 space-y-5">
+                     <div className="flex items-center justify-between gap-2">
+                         <div className="flex-1">
+                             <label className="text-[9px] font-black text-slate-400 uppercase block mb-1">Origen</label>
+                             <select className="w-full p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl text-xs font-bold outline-none" value={transferData.from} onChange={e => setTransferData({...transferData, from: e.target.value})}>
+                                 <option value="CASH">Caja (Efectivo)</option>
+                                 {bankAccounts.map(b => <option key={b.id} value={b.id}>{b.alias || b.bankName}</option>)}
+                             </select>
+                         </div>
+                         <ArrowRight className="text-slate-300 mt-4" size={20}/>
+                         <div className="flex-1">
+                             <label className="text-[9px] font-black text-slate-400 uppercase block mb-1">Destino</label>
+                             <select className="w-full p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl text-xs font-bold outline-none" value={transferData.to} onChange={e => setTransferData({...transferData, to: e.target.value})}>
+                                 <option value="">-- Seleccionar --</option>
+                                 <option value="CASH">Caja (Efectivo)</option>
+                                 {bankAccounts.filter(b => b.id !== transferData.from).map(b => <option key={b.id} value={b.id}>{b.alias || b.bankName}</option>)}
+                             </select>
+                         </div>
+                     </div>
+
+                     <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Monto a Transferir</label>
+                        <input type="number" className="w-full p-4 text-2xl font-black text-center bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-700 rounded-2xl outline-none focus:border-blue-500" value={transferData.amount} onChange={e => setTransferData({...transferData, amount: e.target.value})} placeholder="0.00" />
+                     </div>
+
+                     <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nro. Operación / Ref</label>
+                        <input type="text" className="w-full p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl text-sm font-bold outline-none" value={transferData.operationNumber} onChange={e => setTransferData({...transferData, operationNumber: e.target.value})} placeholder="Ej. 123456" />
+                     </div>
+
+                     <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nota (Opcional)</label>
+                        <input type="text" className="w-full p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl text-sm font-bold outline-none" value={transferData.reference} onChange={e => setTransferData({...transferData, reference: e.target.value})} placeholder="Ej. Cierre de caja..." />
+                     </div>
+
+                     <button onClick={handleExecuteTransfer} className="w-full py-4 bg-blue-600 text-white font-black rounded-2xl uppercase text-xs tracking-widest shadow-xl hover:bg-blue-700 transition-all active:scale-95 flex items-center justify-center gap-2">
+                        <ArrowRightLeft size={16}/> Ejecutar Transferencia
+                     </button>
+                 </div>
+            </div>
+        </div>
+      )}
 
         {selectedMovement && (
             <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[2000] flex items-center justify-center p-2 md:p-4">
@@ -839,9 +968,7 @@ export const CashModule: React.FC<CashModuleProps> = ({
             </div>
         )}
 
-        {/* MODALS FOR INCOME, EXPENSE, CLOSE... (Simplified for brevity as logic is same) */}
-        {/* ... (Existing modals code would be here, assumed unchanged) ... */}
-        {/* JUST ADDING THE CLOSE BOX MODAL AS EXAMPLE OF INTEGRATION */}
+        {/* MODAL CIERRE */}
         {isCloseModalOpen && (
             <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[2000] flex items-center justify-center p-4">
                 <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-2xl overflow-hidden w-[500px]">
@@ -850,7 +977,7 @@ export const CashModule: React.FC<CashModuleProps> = ({
                         expectedCash={currentCashActual} 
                         bankBalances={bankBalancesInfo}
                         onConfirm={(total, notes, confirmed) => {
-                            onCloseCashBox(total, currentCashActual, 0, notes, confirmed); // 0 is systemDigital placeholder
+                            onCloseCashBox(total, currentCashActual, 0, notes, confirmed);
                             setIsCloseModalOpen(false);
                         }}
                         onCancel={() => setIsCloseModalOpen(false)}
