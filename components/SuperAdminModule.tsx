@@ -116,6 +116,8 @@ export const SuperAdminModule: React.FC<SuperAdminModuleProps> = ({
         title: '', module: '', description: '', youtubeUrl: '', duration: '', categoryColor: 'bg-blue-500'
     });
 
+    const [selectedTraceabilityItem, setSelectedTraceabilityItem] = useState<any | null>(null);
+
     const [currentCollPay, setCurrentCollPay] = useState({
         method: 'Efectivo' as PaymentMethodType,
         amount: '',
@@ -495,7 +497,7 @@ export const SuperAdminModule: React.FC<SuperAdminModuleProps> = ({
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                 {traceabilityList.map((item: any) => (
-                                    <tr key={item.globalId} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+                                    <tr key={item.globalId} onClick={() => setSelectedTraceabilityItem(item)} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group cursor-pointer">
                                         <td className="px-6 py-3 font-mono font-bold text-indigo-600">
                                             {item.globalId}
                                         </td>
@@ -845,6 +847,68 @@ export const SuperAdminModule: React.FC<SuperAdminModuleProps> = ({
                     </div>
                 </div>
             )}
+            {/* TRACEABILITY DETAILS MODAL */}
+            {selectedTraceabilityItem && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm animate-in fade-in" onClick={() => setSelectedTraceabilityItem(null)}></div>
+                    <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden animate-in zoom-in-95">
+                        <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
+                            <div>
+                                <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tighter flex items-center gap-3">
+                                    <ActivityIcon size={24} className="text-indigo-500" />
+                                    Detalle de Transacción
+                                </h3>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                                    ID Global SaaS: <span className="text-indigo-600 font-mono">{selectedTraceabilityItem.globalId}</span>
+                                </p>
+                            </div>
+                            <button onClick={() => setSelectedTraceabilityItem(null)} className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 transition-colors">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="p-8 space-y-6 max-h-[70vh] overflow-y-auto">
+                            <div className="grid grid-cols-2 gap-6">
+                                <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Empresa (Tenant)</p>
+                                    <p className="font-bold text-slate-800 dark:text-white uppercase">{selectedTraceabilityItem.tenant}</p>
+                                </div>
+                                <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Tipo de Operación</p>
+                                    <p className="font-bold text-slate-800 dark:text-white uppercase">{selectedTraceabilityItem.type}</p>
+                                </div>
+                                <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Fecha y Hora</p>
+                                    <p className="font-bold text-slate-800 dark:text-white">{selectedTraceabilityItem.date} - {selectedTraceabilityItem.time}</p>
+                                </div>
+                                <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Referencia Local</p>
+                                    <p className="font-mono font-bold text-slate-600 dark:text-slate-300 text-sm">{selectedTraceabilityItem.ref}</p>
+                                </div>
+                            </div>
+                            
+                            <div className="p-6 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl border border-indigo-100 dark:border-indigo-800/30 flex justify-between items-center">
+                                <div>
+                                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Monto Total Involucrado</p>
+                                    <p className="text-3xl font-black text-indigo-700 dark:text-indigo-400">
+                                        {selectedTraceabilityItem.currency || 'PEN'} {selectedTraceabilityItem.amount?.toFixed(2)}
+                                    </p>
+                                </div>
+                                <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-800/50 rounded-xl flex items-center justify-center text-indigo-500">
+                                    <Database size={24} />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Datos Crudos (JSON)</p>
+                                <pre className="bg-slate-900 text-emerald-400 p-4 rounded-2xl text-[10px] font-mono overflow-x-auto border border-slate-800 shadow-inner">
+                                    {JSON.stringify(selectedTraceabilityItem, null, 2)}
+                                </pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 };

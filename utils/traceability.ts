@@ -23,9 +23,9 @@ export const formatDocumentId = (prefix: string, sequence: number, length: numbe
 let globalTransactionCounter = 0;
 
 // Helper to generate a complete transaction record ID (SaaS Global ID)
-export const generateTransactionId = (prefix: string = 'TRX'): string => {
+export const generateTransactionId = (): string => {
     globalTransactionCounter++;
-    return `#${globalTransactionCounter.toString().padStart(8, '0')}`;
+    return globalTransactionCounter.toString();
 };
 
 // In-memory sequence tracker (simulated for this session)

@@ -276,7 +276,7 @@ const App = () => {
 
   const handleProcessSale = (cart: CartItem[], total: number, docType: string, clientName: string, paymentBreakdown: PaymentBreakdown, ticketId: string, detailedPayments: any[], currency: string, exchangeRate: number) => {
       // Generate Traceability IDs
-      const globalId = generateTransactionId('TRX-SALE');
+      const globalId = generateTransactionId();
       // If ticketId is not provided or is just a timestamp, generate a proper correlative
       const correlativeId = ticketId && ticketId.includes('-') ? ticketId : formatDocumentId(docType.substring(0, 3).toUpperCase(), getNextSequence(docType));
 
@@ -332,7 +332,7 @@ const App = () => {
 
               const movement: CashMovement = {
                   id: 'M-' + generateUUID(),
-                  globalId: globalId, // Link to the main transaction
+                  globalId: generateTransactionId(), // Unique global ID
                   tenantId: session?.businessName || 'SapiSoft Demo',
                   branchId: currentBranchId,
                   date: sale.date,
@@ -353,7 +353,7 @@ const App = () => {
       } else if (paymentBreakdown.cash > 0) {
            const m: CashMovement = {
               id: 'M-' + generateUUID(),
-              globalId: globalId,
+              globalId: generateTransactionId(), // Unique global ID
               tenantId: session?.businessName || 'SapiSoft Demo',
               branchId: currentBranchId,
               date: sale.date,
@@ -375,7 +375,7 @@ const App = () => {
   };
 
   const handleProcessPurchase = (cart: CartItem[], total: number, docType: string, supplierName: string, paymentCondition: 'Contado' | 'Credito', creditDays: number, detailedPayments: any[], currency?: string, exchangeRate?: number) => {
-      const globalId = generateTransactionId('TRX-PUR');
+      const globalId = generateTransactionId();
       const correlativeId = formatDocumentId('PUR', getNextSequence('COMPRA'));
 
       const purchase: PurchaseRecord = {
@@ -555,7 +555,7 @@ const App = () => {
   const handleAddService = (s: ServiceOrder) => {
       const enrichedService = {
           ...s,
-          globalId: s.globalId || generateTransactionId('TRX'),
+          globalId: s.globalId || generateTransactionId(),
           tenantId: s.tenantId || session?.businessName || 'SapiSoft Demo',
           branchId: s.branchId || currentBranchId
       };
@@ -756,6 +756,7 @@ const App = () => {
       
       const movement: CashMovement = {
           id: 'M-WALLET-' + Date.now(),
+          globalId: generateTransactionId(), // Unique global ID
           tenantId: session?.businessName || 'SapiSoft Demo',
           branchId: currentBranchId,
           date: new Date().toLocaleDateString('es-PE'),
@@ -832,7 +833,7 @@ const App = () => {
   const handleAddMovement = (m: CashMovement) => {
       const enrichedMovement = {
           ...m,
-          globalId: m.globalId || generateTransactionId('TRX'),
+          globalId: m.globalId || generateTransactionId(),
           tenantId: m.tenantId || session?.businessName || 'SapiSoft Demo'
       };
       setCashMovements(prev => [enrichedMovement, ...prev]);
@@ -840,7 +841,7 @@ const App = () => {
   const handleAddQuotation = (q: Quotation) => {
       const enrichedQuotation = {
           ...q,
-          globalId: q.globalId || generateTransactionId('TRX'),
+          globalId: q.globalId || generateTransactionId(),
           tenantId: q.tenantId || session?.businessName || 'SapiSoft Demo',
           branchId: q.branchId || currentBranchId
       };
@@ -858,7 +859,7 @@ const App = () => {
   const handleAddPresale = (p: Presale) => {
       const enrichedPresale = {
           ...p,
-          globalId: p.globalId || generateTransactionId('TRX'),
+          globalId: p.globalId || generateTransactionId(),
           tenantId: p.tenantId || session?.businessName || 'SapiSoft Demo',
           branchId: p.branchId || currentBranchId
       };
