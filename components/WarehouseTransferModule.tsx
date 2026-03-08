@@ -148,43 +148,44 @@ const WarehouseTransferModule: React.FC<WarehouseTransferProps> = ({
     return (
         <div className="flex flex-col h-full gap-4 animate-in fade-in duration-500">
             {/* Header Tabs */}
-            <div className="bg-white dark:bg-slate-800 p-6 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-700 flex justify-between items-center">
-                <div className="flex gap-2">
+            <div className="bg-white dark:bg-slate-800 p-4 md:p-6 rounded-2xl md:rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div className="flex gap-2 overflow-x-auto no-scrollbar w-full md:w-auto pb-2 md:pb-0">
                     <button 
                         onClick={() => setActiveTab('SEND')}
-                        className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'SEND' ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-50 dark:bg-slate-900 text-slate-500 hover:bg-slate-100'}`}
+                        className={`px-4 md:px-6 py-2.5 md:py-3 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 shrink-0 ${activeTab === 'SEND' ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-50 dark:bg-slate-900 text-slate-500 hover:bg-slate-100'}`}
                     >
-                        <ArrowRightLeft size={16}/> Historial / Envíos
+                        <ArrowRightLeft size={14}/> <span className="hidden sm:inline">Historial /</span> Envíos
                     </button>
                     <button 
                         onClick={() => setActiveTab('REQUESTS')}
-                        className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'REQUESTS' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-50 dark:bg-slate-900 text-slate-500 hover:bg-slate-100'}`}
+                        className={`px-4 md:px-6 py-2.5 md:py-3 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 shrink-0 ${activeTab === 'REQUESTS' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-50 dark:bg-slate-900 text-slate-500 hover:bg-slate-100'}`}
                     >
-                        <Inbox size={16}/> Por Atender {requestsToFulfill.length > 0 && <span className="bg-white text-indigo-600 px-1.5 py-0.5 rounded-full text-[9px]">{requestsToFulfill.length}</span>}
+                        <Inbox size={14}/> <span className="hidden sm:inline">Por</span> Atender {requestsToFulfill.length > 0 && <span className="bg-white text-indigo-600 px-1.5 py-0.5 rounded-full text-[8px]">{requestsToFulfill.length}</span>}
                     </button>
                     <button 
                         onClick={() => setActiveTab('RECEIVE')}
-                        className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'RECEIVE' ? 'bg-emerald-600 text-white shadow-lg' : 'bg-slate-50 dark:bg-slate-900 text-slate-500 hover:bg-slate-100'}`}
+                        className={`px-4 md:px-6 py-2.5 md:py-3 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 shrink-0 ${activeTab === 'RECEIVE' ? 'bg-emerald-600 text-white shadow-lg' : 'bg-slate-50 dark:bg-slate-900 text-slate-500 hover:bg-slate-100'}`}
                     >
-                        <Download size={16}/> Recepción {incomingTransfers.length > 0 && <span className="bg-white text-emerald-600 px-1.5 py-0.5 rounded-full text-[9px]">{incomingTransfers.length}</span>}
+                        <Download size={14}/> Recepción {incomingTransfers.length > 0 && <span className="bg-white text-emerald-600 px-1.5 py-0.5 rounded-full text-[9px]">{incomingTransfers.length}</span>}
                     </button>
                 </div>
-                <button onClick={() => { setTransferMode('SEND'); setTransferCart([]); setReferenceNote(''); setSelectedBranchId(''); setShowModal(true); }} className="bg-slate-900 dark:bg-white dark:text-slate-900 text-white px-8 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl transition-all flex items-center gap-2 active:scale-95">
+                <button onClick={() => { setTransferMode('SEND'); setTransferCart([]); setReferenceNote(''); setSelectedBranchId(''); setShowModal(true); }} className="w-full md:w-auto bg-slate-900 dark:bg-white dark:text-slate-900 text-white px-6 md:px-8 py-3 rounded-xl md:rounded-2xl font-black text-[9px] md:text-[10px] uppercase tracking-widest shadow-xl transition-all flex items-center justify-center gap-2 active:scale-95">
                     <Plus size={16}/> Nueva Operación
                 </button>
             </div>
 
             {/* CONTENT AREA */}
-            <div className="flex-1 bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col">
+            <div className="flex-1 bg-white dark:bg-slate-800 rounded-2xl md:rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col">
                 
                 {activeTab === 'SEND' && (
                     <>
-                        <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 flex items-center gap-2">
+                        <div className="p-4 md:p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 flex items-center gap-2">
                             <History size={16} className="text-slate-400"/>
-                            <h3 className="font-black text-xs uppercase tracking-widest text-slate-500">Historial General</h3>
+                            <h3 className="font-black text-[10px] md:text-xs uppercase tracking-widest text-slate-500">Historial General</h3>
                         </div>
                         <div className="flex-1 overflow-auto">
-                            <table className="w-full text-left">
+                            {/* Desktop Table */}
+                            <table className="hidden md:table w-full text-left">
                                 <thead className="sticky top-0 bg-white dark:bg-slate-800 text-[10px] font-black uppercase text-slate-400 tracking-widest border-b z-10">
                                     <tr>
                                         <th className="px-8 py-4">ID Operación</th>
@@ -229,12 +230,44 @@ const WarehouseTransferModule: React.FC<WarehouseTransferProps> = ({
                                     ))}
                                 </tbody>
                             </table>
+
+                            {/* Mobile Card List */}
+                            <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-700">
+                                {history.filter(t => t.fromBranchId === currentBranchId || t.toBranchId === currentBranchId).length === 0 ? (
+                                    <div className="text-center py-12 text-slate-300 font-bold uppercase tracking-widest italic opacity-50 text-[10px]">Sin registros</div>
+                                ) : history.filter(t => t.fromBranchId === currentBranchId || t.toBranchId === currentBranchId).map(t => (
+                                    <div key={t.id} className="p-4 space-y-3 active:bg-slate-50 dark:active:bg-slate-900/50 transition-colors" onClick={() => setSelectedTransfer(t)}>
+                                        <div className="flex justify-between items-start">
+                                            <div className="flex flex-col">
+                                                <span className="text-[9px] font-black text-blue-600 font-mono">#{t.id.substring(3,9)}</span>
+                                                <span className="text-[10px] font-black text-slate-700 dark:text-slate-200">{t.date} {t.time}</span>
+                                            </div>
+                                            <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase border ${t.status === 'COMPLETED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : t.status === 'REJECTED' ? 'bg-red-50 text-red-600 border-red-100' : t.status === 'REQUESTED' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-amber-50 text-amber-600 border-amber-100 animate-pulse'}`}>
+                                                {t.status === 'COMPLETED' ? 'Recibido' : t.status === 'REJECTED' ? 'Rechazado' : t.status === 'REQUESTED' ? 'Solicitado' : 'En Tránsito'}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-[10px] font-bold text-slate-700 dark:text-white uppercase">
+                                            <span className="truncate max-w-[100px]">{t.fromBranchName}</span>
+                                            <ArrowRight size={10} className="shrink-0"/>
+                                            <span className="truncate max-w-[100px]">{t.toBranchName}</span>
+                                        </div>
+                                        <div className="flex justify-between items-end">
+                                            <div className="text-[9px] font-bold text-slate-400 uppercase truncate max-w-[180px]">
+                                                {t.notes || 'Sin referencia'}
+                                            </div>
+                                            <div className="text-[9px] font-black text-slate-500 uppercase flex items-center gap-1">
+                                                <Package size={10}/> {t.items.length} Items
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </>
                 )}
 
                 {activeTab === 'REQUESTS' && (
-                    <div className="flex-1 overflow-auto p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 content-start bg-slate-50/50 dark:bg-slate-900/20">
+                    <div className="flex-1 overflow-auto p-4 md:p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 content-start bg-slate-50/50 dark:bg-slate-900/20">
                         {requestsToFulfill.length === 0 ? (
                             <div className="col-span-full h-64 flex flex-col items-center justify-center text-slate-300 opacity-50">
                                 <Inbox size={64} className="mb-4"/>
@@ -300,7 +333,7 @@ const WarehouseTransferModule: React.FC<WarehouseTransferProps> = ({
                 )}
 
                 {activeTab === 'RECEIVE' && (
-                    <div className="flex-1 overflow-auto p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 content-start bg-slate-50/50 dark:bg-slate-900/20">
+                    <div className="flex-1 overflow-auto p-4 md:p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 content-start bg-slate-50/50 dark:bg-slate-900/20">
                         {incomingTransfers.length === 0 ? (
                             <div className="col-span-full h-64 flex flex-col items-center justify-center text-slate-300 opacity-50">
                                 <Truck size={64} className="mb-4"/>
@@ -474,50 +507,50 @@ const WarehouseTransferModule: React.FC<WarehouseTransferProps> = ({
 
             {/* MODAL NUEVA OPERACIÓN (ENVIO / PEDIDO) */}
             {showModal && (
-                <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[1000] flex items-center justify-center p-4">
-                    <div className="bg-white dark:bg-slate-900 w-full max-w-5xl h-[85vh] rounded-[3rem] shadow-2xl border border-white/20 animate-in zoom-in-95 overflow-hidden flex flex-col">
-                        <div className="p-8 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center shrink-0">
-                            <h3 className="font-black text-xl uppercase tracking-tighter dark:text-white flex items-center gap-4">
-                                <ArrowRightLeft size={24} className="text-blue-600"/> 
-                                {transferMode === 'SEND' ? 'Enviar Mercadería' : 'Solicitar Stock (Pedido)'}
+                <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[1000] flex items-center justify-center p-2 md:p-4">
+                    <div className="bg-white dark:bg-slate-900 w-full max-w-5xl h-[95vh] md:h-[85vh] rounded-3xl md:rounded-[3rem] shadow-2xl border border-white/20 animate-in zoom-in-95 overflow-hidden flex flex-col">
+                        <div className="p-4 md:p-8 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center shrink-0">
+                            <h3 className="font-black text-base md:text-xl uppercase tracking-tighter dark:text-white flex items-center gap-3 md:gap-4">
+                                <ArrowRightLeft size={20} className="text-blue-600"/> 
+                                <span className="truncate">{transferMode === 'SEND' ? 'Enviar Mercadería' : 'Solicitar Stock (Pedido)'}</span>
                             </h3>
                             <button onClick={() => setShowModal(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"><X size={24}/></button>
                         </div>
-                        <div className="flex-1 flex min-h-0">
-                            <div className="w-[40%] p-8 bg-slate-50 dark:bg-slate-900/50 border-r border-slate-100 dark:border-slate-800 space-y-6 overflow-y-auto no-scrollbar">
+                        <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-y-auto md:overflow-hidden">
+                            <div className="w-full md:w-[40%] p-4 md:p-8 bg-slate-50 dark:bg-slate-900/50 border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-800 space-y-4 md:space-y-6 shrink-0">
                                 
                                 {/* TIPO DE OPERACIÓN */}
                                 <div className="bg-white dark:bg-slate-800 p-1 rounded-2xl border border-slate-200 dark:border-slate-700 flex">
                                     <button 
                                         onClick={() => setTransferMode('SEND')} 
-                                        className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${transferMode === 'SEND' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-700'}`}
+                                        className={`flex-1 py-2.5 md:py-3 rounded-xl text-[9px] md:text-[10px] font-black uppercase transition-all ${transferMode === 'SEND' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-700'}`}
                                     >
-                                        <ArrowRight size={14} className="inline mr-2"/> Enviar A...
+                                        <ArrowRight size={14} className="inline mr-1 md:mr-2"/> Enviar A...
                                     </button>
                                     <button 
                                         onClick={() => setTransferMode('REQUEST')} 
-                                        className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${transferMode === 'REQUEST' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-700'}`}
+                                        className={`flex-1 py-2.5 md:py-3 rounded-xl text-[9px] md:text-[10px] font-black uppercase transition-all ${transferMode === 'REQUEST' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-700'}`}
                                     >
-                                        <ArrowLeft size={14} className="inline mr-2"/> Pedir De...
+                                        <ArrowLeft size={14} className="inline mr-1 md:mr-2"/> Pedir De...
                                     </button>
                                 </div>
 
-                                <div className="space-y-4">
-                                    <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                                <div className="space-y-3 md:space-y-4">
+                                    <div className="bg-white dark:bg-slate-800 p-3 md:p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
+                                        <label className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 md:mb-2">
                                             {transferMode === 'SEND' ? 'Destino (Sucursal Receptora)' : 'Origen (Sucursal Proveedora)'}
                                         </label>
-                                        <select className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl font-black text-[11px] uppercase outline-none focus:border-blue-500" value={selectedBranchId} onChange={e=>setSelectedBranchId(e.target.value)}>
+                                        <select className="w-full p-2.5 md:p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl font-black text-[10px] md:text-[11px] uppercase outline-none focus:border-blue-500" value={selectedBranchId} onChange={e=>setSelectedBranchId(e.target.value)}>
                                             <option value="">Seleccionar Sucursal...</option>
                                             {branches.filter(b=>b.id!==currentBranchId).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                                         </select>
                                     </div>
                                     
-                                    <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Referencia / Cliente</label>
+                                    <div className="bg-white dark:bg-slate-800 p-3 md:p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
+                                        <label className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 md:mb-2">Referencia / Cliente</label>
                                         <input 
                                             type="text" 
-                                            className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl font-bold text-sm uppercase outline-none focus:border-blue-500"
+                                            className="w-full p-2.5 md:p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl font-bold text-xs md:text-sm uppercase outline-none focus:border-blue-500"
                                             placeholder="Nombre del Cliente o Nota..."
                                             value={referenceNote}
                                             onChange={e => setReferenceNote(e.target.value)}
@@ -526,13 +559,13 @@ const WarehouseTransferModule: React.FC<WarehouseTransferProps> = ({
                                 </div>
 
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Seleccionar Artículos</label>
+                                    <label className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Seleccionar Artículos</label>
                                     
                                     {/* Load Quote Button */}
                                     {transferMode === 'REQUEST' && (
                                         <button 
                                             onClick={() => setShowQuoteSelector(true)}
-                                            className="w-full py-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-300 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 mb-2 hover:bg-indigo-100 transition-colors"
+                                            className="w-full py-2.5 md:py-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-300 rounded-xl font-black text-[9px] md:text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 mb-2 hover:bg-indigo-100 transition-colors"
                                         >
                                             <Clock size={14}/> Cargar desde Preventa
                                         </button>
@@ -540,14 +573,14 @@ const WarehouseTransferModule: React.FC<WarehouseTransferProps> = ({
 
                                     <div className="relative">
                                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18}/>
-                                        <input type="text" className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-2xl outline-none font-bold text-sm" placeholder="SKU o Nombre..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)}/>
+                                        <input type="text" className="w-full pl-10 md:pl-12 pr-4 py-2.5 md:py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl md:rounded-2xl outline-none font-bold text-xs md:text-sm" placeholder="SKU o Nombre..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)}/>
                                         {filteredProducts.length > 0 && (
                                             <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 border rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in">
                                                 {filteredProducts.map(p => (
-                                                    <button key={p.id} onClick={() => addToCart(p)} className="w-full p-4 text-left hover:bg-blue-50 dark:hover:bg-slate-700 flex justify-between items-center border-b border-slate-50 last:border-0 group transition-colors">
+                                                    <button key={p.id} onClick={() => addToCart(p)} className="w-full p-3 md:p-4 text-left hover:bg-blue-50 dark:hover:bg-slate-700 flex justify-between items-center border-b border-slate-50 last:border-0 group transition-colors">
                                                         <div>
-                                                            <div className="font-black text-[10px] uppercase text-slate-700 dark:text-white group-hover:text-blue-600">{p.name}</div>
-                                                            <div className="text-[9px] text-slate-400 font-bold">Disp. Local: {p.stock}</div>
+                                                            <div className="font-black text-[9px] md:text-[10px] uppercase text-slate-700 dark:text-white group-hover:text-blue-600">{p.name}</div>
+                                                            <div className="text-[8px] md:text-[9px] text-slate-400 font-bold">Disp. Local: {p.stock}</div>
                                                         </div>
                                                         <Plus size={16} className="text-blue-600"/>
                                                     </button>
@@ -557,21 +590,21 @@ const WarehouseTransferModule: React.FC<WarehouseTransferProps> = ({
                                     </div>
                                 </div>
                             </div>
-                            <div className="flex-1 p-8 flex flex-col min-h-0 bg-white dark:bg-slate-950">
-                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2"><Package size={14}/> Lista de Carga</h4>
-                                <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
+                            <div className="flex-1 p-4 md:p-8 flex flex-col min-h-0 bg-white dark:bg-slate-950">
+                                <h4 className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 md:mb-6 flex items-center gap-2"><Package size={14}/> Lista de Carga</h4>
+                                <div className="flex-1 overflow-y-auto space-y-2 md:space-y-3 pr-1 md:pr-2 custom-scrollbar">
                                     {transferCart.length === 0 ? (
-                                        <div className="h-full flex flex-col items-center justify-center opacity-20 grayscale scale-75"><Package size={64} className="mb-4"/><p className="font-black uppercase tracking-widest text-sm">Lista Vacía</p></div>
+                                        <div className="h-full flex flex-col items-center justify-center opacity-20 grayscale scale-75 py-12 md:py-0"><Package size={64} className="mb-4"/><p className="font-black uppercase tracking-widest text-xs md:text-sm">Lista Vacía</p></div>
                                     ) : transferCart.map((item, idx) => (
-                                        <div key={idx} className="p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl flex items-center justify-between group animate-in slide-in-from-right-4">
-                                            <div className="min-w-0">
-                                                <p className="font-black text-[11px] uppercase text-slate-800 dark:text-white truncate pr-4">{item.productName}</p>
-                                                <p className="text-[9px] font-bold text-slate-400 uppercase">Stock Local: {item.maxStock}</p>
+                                        <div key={idx} className="p-3 md:p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl md:rounded-2xl flex items-center justify-between group animate-in slide-in-from-right-4">
+                                            <div className="min-w-0 flex-1">
+                                                <p className="font-black text-[10px] md:text-[11px] uppercase text-slate-800 dark:text-white truncate pr-2 md:pr-4">{item.productName}</p>
+                                                <p className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase">Stock Local: {item.maxStock}</p>
                                             </div>
-                                            <div className="flex items-center gap-6">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-[9px] font-black text-slate-400 uppercase">Cant:</span>
-                                                    <input type="number" className="w-16 p-2 bg-white dark:bg-slate-800 border rounded-xl text-center font-black text-sm outline-none focus:border-blue-500" value={item.quantity} onChange={e => {
+                                            <div className="flex items-center gap-3 md:gap-6">
+                                                <div className="flex items-center gap-1.5 md:gap-2">
+                                                    <span className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase">Cant:</span>
+                                                    <input type="number" className="w-12 md:w-16 p-1.5 md:p-2 bg-white dark:bg-slate-800 border rounded-lg md:rounded-xl text-center font-black text-xs md:text-sm outline-none focus:border-blue-500" value={item.quantity} onChange={e => {
                                                         const val = Math.max(1, Number(e.target.value));
                                                         setTransferCart(transferCart.map(it => it.productId === item.productId ? { ...it, quantity: val } : it));
                                                     }}/>
@@ -581,8 +614,8 @@ const WarehouseTransferModule: React.FC<WarehouseTransferProps> = ({
                                         </div>
                                     ))}
                                 </div>
-                                <div className="pt-8 shrink-0">
-                                    <button onClick={handleProcess} disabled={transferCart.length === 0 || !selectedBranchId} className={`w-full py-5 text-white rounded-[2rem] font-black uppercase text-xs tracking-[0.2em] shadow-2xl transition-all active:scale-95 disabled:opacity-30 ${transferMode === 'SEND' ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/30' : 'bg-purple-600 hover:bg-purple-700 shadow-purple-500/30'}`}>
+                                <div className="pt-4 md:pt-8 shrink-0">
+                                    <button onClick={handleProcess} disabled={transferCart.length === 0 || !selectedBranchId} className={`w-full py-4 md:py-5 text-white rounded-2xl md:rounded-[2rem] font-black uppercase text-[10px] md:text-xs tracking-[0.15em] md:tracking-[0.2em] shadow-2xl transition-all active:scale-95 disabled:opacity-30 ${transferMode === 'SEND' ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/30' : 'bg-purple-600 hover:bg-purple-700 shadow-purple-500/30'}`}>
                                         {transferMode === 'SEND' ? 'Enviar Mercadería' : 'Solicitar Pedido'}
                                     </button>
                                 </div>
@@ -624,24 +657,24 @@ const WarehouseTransferModule: React.FC<WarehouseTransferProps> = ({
 
             {/* FULFILL REQUEST MODAL */}
             {fulfillModalOpen && selectedRequestToFulfill && (
-                <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[1100] flex items-center justify-center p-4">
-                    <div className="bg-white dark:bg-slate-900 w-full max-w-2xl h-[80vh] rounded-[3rem] shadow-2xl border border-white/20 animate-in zoom-in-95 overflow-hidden flex flex-col">
-                        <div className="p-8 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-indigo-50 dark:bg-indigo-900/20">
+                <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[1100] flex items-center justify-center p-2 md:p-4">
+                    <div className="bg-white dark:bg-slate-900 w-full max-w-2xl h-[90vh] md:h-[80vh] rounded-3xl md:rounded-[3rem] shadow-2xl border border-white/20 animate-in zoom-in-95 overflow-hidden flex flex-col">
+                        <div className="p-4 md:p-8 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-indigo-50 dark:bg-indigo-900/20 shrink-0">
                             <div>
-                                <h3 className="font-black text-xl uppercase tracking-tighter text-indigo-700 dark:text-white flex items-center gap-2">
-                                    <Truck size={24}/> Atender Pedido
+                                <h3 className="font-black text-base md:text-xl uppercase tracking-tighter text-indigo-700 dark:text-white flex items-center gap-2">
+                                    <Truck className="w-5 h-5 md:w-6 md:h-6"/> Atender Pedido
                                 </h3>
-                                <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mt-1">Solicitado por: {selectedRequestToFulfill.toBranchName}</p>
+                                <p className="text-[9px] md:text-[10px] font-bold text-indigo-400 uppercase tracking-widest mt-1 truncate max-w-[200px] md:max-w-none">Solicitado por: {selectedRequestToFulfill.toBranchName}</p>
                             </div>
                             <button onClick={() => setFulfillModalOpen(false)} className="p-2 hover:bg-white/50 rounded-full transition-colors"><X size={24}/></button>
                         </div>
                         
-                        <div className="flex-1 overflow-y-auto p-8 space-y-4 custom-scrollbar">
-                            <div className="flex justify-between items-center px-2 mb-2">
-                                <span className="text-[10px] font-black text-slate-400 uppercase">Producto</span>
-                                <div className="flex gap-8 text-[10px] font-black text-slate-400 uppercase">
-                                    <span className="w-16 text-center">Pedido</span>
-                                    <span className="w-16 text-center">Enviar</span>
+                        <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-3 md:space-y-4 custom-scrollbar">
+                            <div className="flex justify-between items-center px-2 mb-1 md:mb-2">
+                                <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase">Producto</span>
+                                <div className="flex gap-4 md:gap-8 text-[9px] md:text-[10px] font-black text-slate-400 uppercase">
+                                    <span className="w-12 md:w-16 text-center">Pedido</span>
+                                    <span className="w-12 md:w-16 text-center">Enviar</span>
                                 </div>
                             </div>
                             
@@ -651,16 +684,16 @@ const WarehouseTransferModule: React.FC<WarehouseTransferProps> = ({
                                 const hasStock = item.maxStock >= item.quantity;
 
                                 return (
-                                    <div key={item.productId} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700">
-                                        <div className="flex-1">
-                                            <p className="font-black text-xs text-slate-800 dark:text-white uppercase truncate pr-4">{prodName}</p>
-                                            <p className={`text-[9px] font-bold uppercase mt-1 ${hasStock ? 'text-emerald-500' : 'text-red-500'}`}>Stock Local: {item.maxStock}</p>
+                                    <div key={item.productId} className="flex items-center justify-between p-3 md:p-4 bg-slate-50 dark:bg-slate-800 rounded-xl md:rounded-2xl border border-slate-100 dark:border-slate-700">
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-black text-[10px] md:text-xs text-slate-800 dark:text-white uppercase truncate pr-2 md:pr-4">{prodName}</p>
+                                            <p className={`text-[8px] md:text-[9px] font-bold uppercase mt-0.5 md:mt-1 ${hasStock ? 'text-emerald-500' : 'text-red-500'}`}>Stock Local: {item.maxStock}</p>
                                         </div>
-                                        <div className="flex items-center gap-8">
-                                            <span className="w-16 text-center font-bold text-slate-400">{originalQty}</span>
+                                        <div className="flex items-center gap-4 md:gap-8">
+                                            <span className="w-12 md:w-16 text-center font-bold text-slate-400 text-[10px] md:text-xs">{originalQty}</span>
                                             <input 
                                                 type="number" 
-                                                className={`w-16 p-2 rounded-xl text-center font-black text-sm outline-none border-2 focus:border-indigo-500 ${item.quantity > item.maxStock ? 'bg-red-50 border-red-200 text-red-600' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-600'}`}
+                                                className={`w-12 md:w-16 p-1.5 md:p-2 rounded-lg md:rounded-xl text-center font-black text-xs md:text-sm outline-none border-2 focus:border-indigo-500 ${item.quantity > item.maxStock ? 'bg-red-50 border-red-200 text-red-600' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-600'}`}
                                                 value={item.quantity}
                                                 onChange={e => {
                                                     const val = Math.max(0, Number(e.target.value));
@@ -673,9 +706,9 @@ const WarehouseTransferModule: React.FC<WarehouseTransferProps> = ({
                             })}
                         </div>
 
-                        <div className="p-8 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
-                            <button onClick={confirmFulfill} className="w-full py-4 bg-indigo-600 text-white rounded-[2rem] font-black uppercase text-xs tracking-[0.2em] shadow-xl hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-3">
-                                <Send size={18}/> Confirmar Despacho
+                        <div className="p-4 md:p-8 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 shrink-0">
+                            <button onClick={confirmFulfill} className="w-full py-3.5 md:py-4 bg-indigo-600 text-white rounded-2xl md:rounded-[2rem] font-black uppercase text-[10px] md:text-xs tracking-[0.15em] md:tracking-[0.2em] shadow-xl hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-2 md:gap-3">
+                                <Send className="w-4 h-4 md:w-[18px] md:h-[18px]"/> Confirmar Despacho
                             </button>
                         </div>
                     </div>

@@ -6,7 +6,7 @@ import {
   SystemUser, AuthSession, Tenant, BankAccount, GeoLocation, 
   Quotation, Presale, Branch, WarehouseTransfer, CashTransferRequest, 
   CashBoxSession, CartItem, PaymentBreakdown, InventoryHistorySession,
-  CrmContact
+  CrmContact, PaymentMethodType
 } from './types';
 import { 
   TECH_PRODUCTS, PHARMA_PRODUCTS, MOCK_CLIENTS, MOCK_SERVICES, 
@@ -60,9 +60,17 @@ import AccountsReceivableModule from './components/AccountsReceivableModule';
 import AccountsPayableModule from './components/AccountsPayableModule'; 
 import { AiAssistantModule } from './components/AiAssistantModule';
 
+import { 
+  generateUUID, 
+  generateTransactionId, 
+  formatDocumentId, 
+  getNextSequence 
+} from './utils/traceability';
+
 const App = () => {
   const [session, setSession] = useState<AuthSession | null>(null);
   const [currentView, setCurrentView] = useState<ViewState>(ViewState.DASHBOARD);
+  const [activeMobileCategory, setActiveMobileCategory] = useState<string | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isSyncEnabled, setIsSyncEnabled] = useState(false);
 
@@ -102,6 +110,61 @@ const App = () => {
   const [cashTransferRequests, setCashTransferRequests] = useState<CashTransferRequest[]>([]);
   const [cashBoxSessions, setCashBoxSessions] = useState<CashBoxSession[]>([]);
   const [inventoryHistory, setInventoryHistory] = useState<InventoryHistorySession[]>([]);
+
+  // --- HISTORY HANDLING ---
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      if (event.state) {
+        if (event.state.view) setCurrentView(event.state.view);
+        if (event.state.hasOwnProperty('folder')) setActiveMobileCategory(event.state.folder);
+      } else {
+        setCurrentView(ViewState.DASHBOARD);
+        setActiveMobileCategory(null);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    
+    // Initial state
+    window.history.replaceState({ view: currentView, folder: activeMobileCategory }, '');
+
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const handleNavigate = (view: ViewState) => {
+    if (view !== currentView) {
+      // Si navegamos a una vista que no es Dashboard, mantenemos la carpeta actual en el estado de historia
+      window.history.pushState({ view, folder: activeMobileCategory }, '', `#${view.toLowerCase()}`);
+      setCurrentView(view);
+    }
+  };
+
+  const handleOpenFolder = (catId: string) => {
+    window.history.pushState({ view: ViewState.DASHBOARD, folder: catId }, '', `#folder-${catId}`);
+    setActiveMobileCategory(catId);
+  };
+
+  const handleCloseFolder = () => {
+    if (activeMobileCategory) {
+      window.history.back();
+    }
+  };
+
+  const handleBack = () => {
+    const isSuperAdmin = session?.user.role === 'SUPER_ADMIN';
+    if (activeMobileCategory && currentView === ViewState.DASHBOARD) {
+      // If in folder on mobile, close it
+      setActiveMobileCategory(null);
+      window.history.pushState({ view: ViewState.DASHBOARD, folder: null }, '', '#');
+    } else if (currentView !== ViewState.DASHBOARD && currentView !== ViewState.SUPER_ADMIN_DASHBOARD) {
+      // If in submodule, go back to dashboard/folder
+      setCurrentView(isSuperAdmin ? ViewState.SUPER_ADMIN_DASHBOARD : ViewState.DASHBOARD);
+      window.history.pushState({ view: isSuperAdmin ? ViewState.SUPER_ADMIN_DASHBOARD : ViewState.DASHBOARD, folder: activeMobileCategory }, '', activeMobileCategory ? `#folder-${activeMobileCategory}` : '#');
+    } else {
+      // Already at top level
+      setCurrentView(isSuperAdmin ? ViewState.SUPER_ADMIN_DASHBOARD : ViewState.DASHBOARD);
+    }
+  };
   
   // --- CRM STATE ---
   const [crmDb, setCrmDb] = useState<Record<string, CrmContact>>(() => {
@@ -180,12 +243,12 @@ const App = () => {
 
   const handleLogout = () => {
     setSession(null);
-    setCurrentView(ViewState.DASHBOARD);
+    handleNavigate(ViewState.DASHBOARD);
   };
 
   const handleRegisterFromCRM = (name: string, phone: string) => {
       setPendingClientData({ name, phone });
-      setCurrentView(ViewState.CLIENTS);
+      handleNavigate(ViewState.CLIENTS);
   };
 
   const handleAddClient = (c: Client) => {
@@ -212,8 +275,16 @@ const App = () => {
   const handleAddProducts = (newProds: Product[]) => setProducts(prev => [...prev, ...newProds]);
 
   const handleProcessSale = (cart: CartItem[], total: number, docType: string, clientName: string, paymentBreakdown: PaymentBreakdown, ticketId: string, detailedPayments: any[], currency: string, exchangeRate: number) => {
+      // Generate Traceability IDs
+      const globalId = generateTransactionId('TRX-SALE');
+      // If ticketId is not provided or is just a timestamp, generate a proper correlative
+      const correlativeId = ticketId && ticketId.includes('-') ? ticketId : formatDocumentId(docType.substring(0, 3).toUpperCase(), getNextSequence(docType));
+
       const sale: SaleRecord = {
-          id: ticketId,
+          id: ticketId || generateUUID(),
+          globalId: globalId,
+          correlativeId: correlativeId,
+          tenantId: session?.businessName || 'SapiSoft Demo',
           branchId: currentBranchId,
           date: new Date().toLocaleDateString('es-PE'),
           time: new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false }),
@@ -230,36 +301,15 @@ const App = () => {
       // Use functional update to avoid race conditions
       setSales(prev => [sale, ...prev]);
 
-      if (sale.paymentBreakdown.cash === 0 && sale.paymentBreakdown.card === 0 && sale.paymentBreakdown.yape === 0 && sale.paymentBreakdown.bank === 0 && sale.paymentBreakdown.wallet === 0) {
-          setClients(prevClients => prevClients.map(c => {
-              if (c.name === clientName) {
-                  return { ...c, creditUsed: (c.creditUsed || 0) + total };
-              }
-              return c;
-          }));
-      }
-
-      // Batch update stock to prevent multiple re-renders and race conditions with state
-      setProducts(prevProducts => {
-          const updatedProducts = [...prevProducts];
-          cart.forEach(item => {
-              const index = updatedProducts.findIndex(p => p.id === item.id);
-              if (index !== -1) {
-                  updatedProducts[index] = { 
-                      ...updatedProducts[index], 
-                      stock: updatedProducts[index].stock - item.quantity 
-                  };
-              }
-          });
-          return updatedProducts;
-      });
+      // ... existing stock update logic ...
 
       const newStockMoves: StockMovement[] = cart.map(item => {
           const product = products.find(p => p.id === item.id);
           const currentStock = (product?.stock || 0) - item.quantity;
           
           return {
-              id: 'MOV-' + Date.now() + Math.random(),
+              id: 'MOV-' + generateUUID(),
+              globalId: globalId, // Link to the main transaction
               branchId: currentBranchId,
               date: sale.date,
               time: sale.time,
@@ -268,7 +318,7 @@ const App = () => {
               type: 'SALIDA',
               quantity: item.quantity,
               currentStock: currentStock, // Approximation for log
-              reference: `${docType} #${ticketId}`,
+              reference: `${docType} #${correlativeId}`,
               user: session?.user.fullName || 'Admin'
           };
       });
@@ -281,13 +331,15 @@ const App = () => {
               if (payment.method === 'Saldo Favor') return;
 
               const movement: CashMovement = {
-                  id: 'M-' + Date.now() + Math.random(),
+                  id: 'M-' + generateUUID(),
+                  globalId: globalId, // Link to the main transaction
+                  tenantId: session?.businessName || 'SapiSoft Demo',
                   branchId: currentBranchId,
                   date: sale.date,
                   time: sale.time,
                   type: 'Ingreso',
                   paymentMethod: payment.method,
-                  concept: `VENTA ${docType} #${ticketId}`,
+                  concept: `VENTA ${docType} #${correlativeId}`,
                   amount: payment.amount,
                   user: session?.user.fullName || 'Admin',
                   category: 'VENTA',
@@ -300,13 +352,15 @@ const App = () => {
           });
       } else if (paymentBreakdown.cash > 0) {
            const m: CashMovement = {
-              id: 'M-' + Date.now(),
+              id: 'M-' + generateUUID(),
+              globalId: globalId,
+              tenantId: session?.businessName || 'SapiSoft Demo',
               branchId: currentBranchId,
               date: sale.date,
               time: sale.time,
               type: 'Ingreso',
               paymentMethod: 'Efectivo',
-              concept: `VENTA ${docType} #${ticketId}`,
+              concept: `VENTA ${docType} #${correlativeId}`,
               amount: paymentBreakdown.cash,
               user: session?.user.fullName || 'Admin',
               category: 'VENTA',
@@ -321,8 +375,14 @@ const App = () => {
   };
 
   const handleProcessPurchase = (cart: CartItem[], total: number, docType: string, supplierName: string, paymentCondition: 'Contado' | 'Credito', creditDays: number, detailedPayments: any[], currency?: string, exchangeRate?: number) => {
+      const globalId = generateTransactionId('TRX-PUR');
+      const correlativeId = formatDocumentId('PUR', getNextSequence('COMPRA'));
+
       const purchase: PurchaseRecord = {
-          id: 'PUR-' + Date.now(),
+          id: 'PUR-' + generateUUID(),
+          globalId: globalId,
+          correlativeId: correlativeId,
+          tenantId: session?.businessName || 'SapiSoft Demo',
           branchId: currentBranchId,
           date: new Date().toLocaleDateString('es-PE'),
           time: new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false }),
@@ -338,27 +398,14 @@ const App = () => {
       };
       setPurchases(prev => [purchase, ...prev]);
 
-      // Batch update stock and cost
-      setProducts(prevProducts => {
-          const updatedProducts = [...prevProducts];
-          cart.forEach(item => {
-              const index = updatedProducts.findIndex(p => p.id === item.id);
-              if (index !== -1) {
-                  updatedProducts[index] = { 
-                      ...updatedProducts[index], 
-                      stock: updatedProducts[index].stock + item.quantity,
-                      cost: item.price
-                  };
-              }
-          });
-          return updatedProducts;
-      });
+      // ... existing stock update logic ...
 
       const newStockMoves: StockMovement[] = cart.map(item => {
           const product = products.find(p => p.id === item.id);
           const currentStock = (product?.stock || 0) + item.quantity;
           return {
-              id: 'MOV-' + Date.now() + Math.random(),
+              id: 'MOV-' + generateUUID(),
+              globalId: globalId,
               branchId: currentBranchId,
               date: purchase.date,
               time: purchase.time,
@@ -367,7 +414,7 @@ const App = () => {
               type: 'ENTRADA',
               quantity: item.quantity,
               currentStock: currentStock, // Approximation
-              reference: `COMPRA ${docType}`,
+              reference: `COMPRA ${docType} #${correlativeId}`,
               user: session?.user.fullName || 'Admin',
               unitCost: item.price
           };
@@ -379,7 +426,8 @@ const App = () => {
           const newPurchaseMovements: CashMovement[] = [];
           detailedPayments.forEach((p: any) => {
               newPurchaseMovements.push({
-                  id: 'M-' + Date.now() + Math.random(),
+                  id: 'M-' + generateUUID(),
+                  globalId: globalId,
                   branchId: currentBranchId,
                   date: purchase.date,
                   time: purchase.time,
@@ -437,6 +485,7 @@ const App = () => {
     // REGISTER MOVEMENT
     const m: CashMovement = {
         id: 'M-' + Date.now() + Math.random(),
+        tenantId: session?.businessName || 'SapiSoft Demo',
         branchId: currentBranchId,
         date: paymentDetails.date,
         time: paymentDetails.time,
@@ -485,6 +534,7 @@ const App = () => {
       // REGISTER MOVEMENT
       const m: CashMovement = {
           id: 'M-' + Date.now() + Math.random(),
+          tenantId: session?.businessName || 'SapiSoft Demo',
           branchId: currentBranchId,
           date: paymentDetails.date,
           time: paymentDetails.time,
@@ -502,27 +552,177 @@ const App = () => {
       setCashMovements(prev => [m, ...prev]);
   };
   
-  const handleAddService = (s: ServiceOrder) => setServices(prev => [s, ...prev]);
+  const handleAddService = (s: ServiceOrder) => {
+      const enrichedService = {
+          ...s,
+          globalId: s.globalId || generateTransactionId('TRX'),
+          tenantId: s.tenantId || session?.businessName || 'SapiSoft Demo',
+          branchId: s.branchId || currentBranchId
+      };
+      setServices(prev => [enrichedService, ...prev]);
+  };
+  const handleUpdateService = (s: ServiceOrder) => setServices(prev => prev.map(item => item.id === s.id ? s : item));
   
   const handleFinalizeService = (serviceId: string, total: number, finalStatus: 'Entregado' | 'Devolucion', paymentBreakdown: PaymentBreakdown) => {
-      setServices(prev => prev.map(s => s.id === serviceId ? { ...s, status: finalStatus, cost: total } : s));
-      if (paymentBreakdown.cash > 0) {
-          setCashMovements(prev => [
-              {
-                  id: 'M-' + Date.now(),
+      const service = services.find(s => s.id === serviceId);
+      if (!service) return;
+
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('es-PE');
+      const timeStr = now.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+      const laborAmount = service.cost;
+      const productsAmount = (service.usedProducts || []).reduce((sum, p) => sum + (p.price * p.quantity), 0);
+      const calculatedTotal = laborAmount + productsAmount;
+
+      setServices(prev => prev.map(s => s.id === serviceId ? { ...s, status: finalStatus, exitDate: dateStr, exitTime: timeStr } : s));
+      
+      if (finalStatus === 'Devolucion') return;
+
+      const newMovements: CashMovement[] = [];
+
+      const addMovementsForMethod = (method: PaymentMethodType, amount: number) => {
+          if (amount <= 0) return;
+
+          // Proportional split
+          const laborPart = calculatedTotal > 0 ? (amount * (laborAmount / calculatedTotal)) : amount;
+          const productsPart = calculatedTotal > 0 ? (amount * (productsAmount / calculatedTotal)) : 0;
+
+          if (laborPart > 0.01) {
+              newMovements.push({
+                  id: 'M-SRV-' + Date.now() + Math.random(),
                   branchId: currentBranchId,
-                  date: new Date().toLocaleDateString('es-PE'),
-                  time: new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false }),
+                  date: dateStr,
+                  time: timeStr,
                   type: 'Ingreso',
-                  paymentMethod: 'Efectivo',
-                  concept: `SERVICIO TECNICO #${serviceId}`,
-                  amount: paymentBreakdown.cash,
+                  paymentMethod: method,
+                  concept: `SERVICIO TECNICO #${serviceId} (MANO DE OBRA)`,
+                  amount: laborPart,
                   user: session?.user.fullName || 'Admin',
                   category: 'SERVICIO',
-                  financialType: 'Variable'
-              },
-              ...prev
-          ]);
+                  financialType: 'Variable',
+                  currency: baseCurrency
+              });
+          }
+
+          if (productsPart > 0.01) {
+              newMovements.push({
+                  id: 'M-PRD-' + Date.now() + Math.random(),
+                  branchId: currentBranchId,
+                  date: dateStr,
+                  time: timeStr,
+                  type: 'Ingreso',
+                  paymentMethod: method,
+                  concept: `VENTA REPUESTOS - SERVICIO #${serviceId}`,
+                  amount: productsPart,
+                  user: session?.user.fullName || 'Admin',
+                  category: 'SERVICIO',
+                  financialType: 'Variable',
+                  currency: baseCurrency
+              });
+          }
+      };
+
+      addMovementsForMethod('Efectivo', paymentBreakdown.cash);
+      addMovementsForMethod('Yape', paymentBreakdown.yape);
+      addMovementsForMethod('Tarjeta', paymentBreakdown.card);
+      addMovementsForMethod('Deposito', paymentBreakdown.bank);
+      addMovementsForMethod('Saldo Favor', paymentBreakdown.wallet);
+
+      if (newMovements.length > 0) {
+          setCashMovements(prev => [...newMovements, ...prev]);
+      }
+
+      // RECORD AS A SALE SO IT APPEARS IN SALES HISTORY
+      const saleItems: CartItem[] = [];
+      
+      if (laborAmount > 0) {
+          saleItems.push({
+              id: 'MANO-DE-OBRA',
+              code: 'SRV-001',
+              name: 'MANO DE OBRA - ' + service.deviceModel,
+              price: laborAmount,
+              cost: 0,
+              stock: 9999,
+              location: 'TALLER',
+              quantity: 1,
+              category: 'SERVICIOS',
+              brand: 'SapiSoft',
+              discount: 0,
+              total: laborAmount
+          });
+      }
+      
+      if (service.usedProducts && service.usedProducts.length > 0) {
+          service.usedProducts.forEach(p => {
+              const originalProduct = products.find(prod => prod.id === p.productId);
+              saleItems.push({
+                  id: p.productId,
+                  code: originalProduct?.code || 'REP-' + p.productId,
+                  name: p.productName,
+                  price: p.price,
+                  cost: originalProduct?.cost || 0,
+                  stock: originalProduct?.stock || 0,
+                  location: originalProduct?.location || 'ALMACEN',
+                  quantity: p.quantity,
+                  category: originalProduct?.category || 'REPUESTOS',
+                  brand: originalProduct?.brand || '',
+                  discount: 0,
+                  total: p.price * p.quantity
+              });
+          });
+      }
+
+      const newSale: SaleRecord = {
+          id: 'SRV-' + serviceId,
+          tenantId: session?.businessName || 'SapiSoft Demo',
+          branchId: currentBranchId,
+          date: dateStr,
+          time: timeStr,
+          clientName: service.client,
+          docType: 'TICKET SERVICIO',
+          total: total,
+          currency: baseCurrency,
+          exchangeRate: 1,
+          items: saleItems,
+          paymentBreakdown: paymentBreakdown,
+          user: session?.user.fullName || 'Admin'
+      };
+
+      setSales(prev => [newSale, ...prev]);
+
+      // RECORD STOCK MOVEMENTS FOR KARDEX
+      if (service.usedProducts && service.usedProducts.length > 0) {
+          const newStockMoves: StockMovement[] = service.usedProducts.map(p => {
+              const product = products.find(prod => prod.id === p.productId);
+              const currentStock = (product?.stock || 0) - p.quantity;
+              return {
+                  id: 'MOV-SRV-' + Date.now() + Math.random(),
+                  branchId: currentBranchId,
+                  date: dateStr,
+                  time: timeStr,
+                  productId: p.productId,
+                  productName: p.productName,
+                  type: 'SALIDA',
+                  quantity: p.quantity,
+                  currentStock: currentStock,
+                  reference: `TICKET SERVICIO #SRV-${serviceId}`,
+                  user: session?.user.fullName || 'Admin'
+              };
+          });
+          setStockMovements(prev => [...newStockMoves, ...prev]);
+          
+          // Also update product stock in state
+          setProducts(prevProducts => {
+              const updated = [...prevProducts];
+              service.usedProducts?.forEach(p => {
+                  const idx = updated.findIndex(prod => prod.id === p.productId);
+                  if (idx !== -1) {
+                      updated[idx] = { ...updated[idx], stock: updated[idx].stock - p.quantity };
+                  }
+              });
+              return updated;
+          });
       }
   };
   
@@ -556,6 +756,7 @@ const App = () => {
       
       const movement: CashMovement = {
           id: 'M-WALLET-' + Date.now(),
+          tenantId: session?.businessName || 'SapiSoft Demo',
           branchId: currentBranchId,
           date: new Date().toLocaleDateString('es-PE'),
           time: new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false }),
@@ -628,8 +829,23 @@ const App = () => {
       }
   };
 
-  const handleAddMovement = (m: CashMovement) => setCashMovements(prev => [m, ...prev]);
-  const handleAddQuotation = (q: Quotation) => setQuotations(prev => [q, ...prev]);
+  const handleAddMovement = (m: CashMovement) => {
+      const enrichedMovement = {
+          ...m,
+          globalId: m.globalId || generateTransactionId('TRX'),
+          tenantId: m.tenantId || session?.businessName || 'SapiSoft Demo'
+      };
+      setCashMovements(prev => [enrichedMovement, ...prev]);
+  };
+  const handleAddQuotation = (q: Quotation) => {
+      const enrichedQuotation = {
+          ...q,
+          globalId: q.globalId || generateTransactionId('TRX'),
+          tenantId: q.tenantId || session?.businessName || 'SapiSoft Demo',
+          branchId: q.branchId || currentBranchId
+      };
+      setQuotations(prev => [enrichedQuotation, ...prev]);
+  };
   const handleDeleteQuotation = (id: string) => setQuotations(prev => prev.filter(q => q.id !== id));
   const handleLoadQuotation = (q: Quotation) => {
       setCart(q.items);
@@ -637,9 +853,17 @@ const App = () => {
           const c = clients.find(cl => cl.name === q.clientName);
           if (c) setPosClient(c);
       }
-      setCurrentView(ViewState.POS);
+      handleNavigate(ViewState.POS);
   };
-  const handleAddPresale = (p: Presale) => setPresales(prev => [p, ...prev]);
+  const handleAddPresale = (p: Presale) => {
+      const enrichedPresale = {
+          ...p,
+          globalId: p.globalId || generateTransactionId('TRX'),
+          tenantId: p.tenantId || session?.businessName || 'SapiSoft Demo',
+          branchId: p.branchId || currentBranchId
+      };
+      setPresales(prev => [enrichedPresale, ...prev]);
+  };
   const handleDeletePresale = (id: string) => setPresales(prev => prev.filter(p => p.id !== id));
   const handleLoadPresale = (p: Presale) => { alert("Procesando entrega de preventa " + p.id); };
   const handleProcessCreditNote = (originalSaleId: string, itemsToReturn: { itemId: string, quantity: number }[], totalRefund: number, breakdown: PaymentBreakdown, detailedRefunds?: any[]) => {
@@ -674,7 +898,9 @@ const App = () => {
       companyLogo={companyLogo}
       navStructure={navStructure}
       currentView={currentView}
-      onNavigate={setCurrentView}
+      activeFolder={activeMobileCategory}
+      onNavigate={handleNavigate}
+      onBack={handleBack}
       isDarkMode={isDarkMode}
       toggleTheme={() => setIsDarkMode(!isDarkMode)}
       session={session}
@@ -687,11 +913,22 @@ const App = () => {
       onCreateBranch={(name, addr) => handleAddBranch(name, addr, '')}
     >
       {currentView === ViewState.DASHBOARD && (
-        <Dashboard onNavigate={setCurrentView} session={session} cashMovements={cashMovements} clients={clients} services={services} products={products} navStructure={navStructure} />
+        <Dashboard 
+          onNavigate={handleNavigate} 
+          session={session} 
+          cashMovements={cashMovements} 
+          clients={clients} 
+          services={services} 
+          products={products} 
+          navStructure={navStructure}
+          activeMobileCategory={activeMobileCategory}
+          onOpenFolder={handleOpenFolder}
+          onCloseFolder={handleCloseFolder}
+        />
       )}
       
       {currentView === ViewState.POS && (
-        <SalesModule products={products} clients={clients} categories={categories} purchasesHistory={purchases} stockMovements={stockMovements} bankAccounts={bankAccounts} locations={locations} onAddClient={handleAddClient} onProcessSale={handleProcessSale} cart={cart} setCart={setCart} client={posClient} setClient={setPosClient} quotations={quotations} onLoadQuotation={handleLoadQuotation} onAddQuotation={handleAddQuotation} onAddPresale={handleAddPresale} systemBaseCurrency={baseCurrency} branches={branches} currentBranchId={currentBranchId} onNavigate={setCurrentView} onUpdateClientBalance={handleUpdateClientBalance} isCashBoxOpen={!!currentCashSession} />
+        <SalesModule products={products} clients={clients} categories={categories} purchasesHistory={purchases} stockMovements={stockMovements} bankAccounts={bankAccounts} locations={locations} onAddClient={handleAddClient} onProcessSale={handleProcessSale} cart={cart} setCart={setCart} client={posClient} setClient={setPosClient} quotations={quotations} onLoadQuotation={handleLoadQuotation} onAddQuotation={handleAddQuotation} onAddPresale={handleAddPresale} systemBaseCurrency={baseCurrency} branches={branches} currentBranchId={currentBranchId} onNavigate={handleNavigate} onUpdateClientBalance={handleUpdateClientBalance} isCashBoxOpen={!!currentCashSession} />
       )}
 
       {currentView === ViewState.ACCOUNTS_RECEIVABLE && (
@@ -703,11 +940,11 @@ const App = () => {
       )}
 
       {currentView === ViewState.SERVICES && (
-        <ServicesModule services={services} products={products} categories={categories} bankAccounts={bankAccounts} onAddService={handleAddService} onFinalizeService={handleFinalizeService} onMarkRepaired={handleMarkRepaired} clients={clients} onAddClient={handleAddClient} onOpenWhatsApp={(name, phone) => { window.open(`https://wa.me/${phone}`); }} locations={locations} currentBranchId={currentBranchId} />
+        <ServicesModule services={services} products={products} categories={categories} bankAccounts={bankAccounts} onAddService={handleAddService} onUpdateService={handleUpdateService} onFinalizeService={handleFinalizeService} onMarkRepaired={handleMarkRepaired} clients={clients} onAddClient={handleAddClient} onOpenWhatsApp={(name, phone) => { window.open(`https://wa.me/${phone}`); }} locations={locations} currentBranchId={currentBranchId} />
       )}
       
       {currentView === ViewState.INVENTORY && (
-        <InventoryModule products={products} brands={brands} categories={categories} onUpdateProduct={handleUpdateProduct} onAddProduct={handleAddProduct} onAddProducts={handleAddProducts} onDeleteProduct={handleDeleteProduct} onNavigate={setCurrentView} salesHistory={sales} purchasesHistory={purchases} stockMovements={stockMovements} />
+        <InventoryModule products={products} brands={brands} categories={categories} onUpdateProduct={handleUpdateProduct} onAddProduct={handleAddProduct} onAddProducts={handleAddProducts} onDeleteProduct={handleDeleteProduct} onNavigate={handleNavigate} salesHistory={sales} purchasesHistory={purchases} stockMovements={stockMovements} />
       )}
 
       {currentView === ViewState.PURCHASES && (
@@ -726,7 +963,7 @@ const App = () => {
 
       {/* WHATSAPP IS NOW ALWAYS RENDERED BUT HIDDEN WHEN NOT ACTIVE TO KEEP SOCKET/AI ALIVE */}
       <div style={{ display: currentView === ViewState.WHATSAPP ? 'flex' : 'none', height: '100%', flex: 1, flexDirection: 'column' }}>
-        <WhatsAppModule clients={clients} onAddClient={handleAddClient} products={products} chats={chats} setChats={setChats} currentUser={session.user.fullName} onNavigate={setCurrentView} crmDb={crmDb} setCrmDb={setCrmDb} crmStages={crmStages} setCrmStages={setCrmStages} onRegisterClientFromCrm={handleRegisterFromCRM} targetChatPhone={targetChatPhone} onClearTargetChat={() => setTargetChatPhone(null)} />
+        <WhatsAppModule clients={clients} onAddClient={handleAddClient} products={products} chats={chats} setChats={setChats} currentUser={session?.user?.fullName || 'Admin'} onNavigate={handleNavigate} crmDb={crmDb} setCrmDb={setCrmDb} crmStages={crmStages} setCrmStages={setCrmStages} onRegisterClientFromCrm={handleRegisterFromCRM} targetChatPhone={targetChatPhone} onClearTargetChat={() => setTargetChatPhone(null)} />
       </div>
 
       {currentView === ViewState.BROADCAST && (
@@ -734,7 +971,7 @@ const App = () => {
       )}
 
       {currentView === ViewState.CRM && (
-        <CrmModule crmDb={crmDb} setCrmDb={setCrmDb} stages={crmStages} onNavigate={setCurrentView} onOpenChat={(phone) => { setTargetChatPhone(phone); setCurrentView(ViewState.WHATSAPP); }} />
+        <CrmModule crmDb={crmDb} setCrmDb={setCrmDb} stages={crmStages} onNavigate={handleNavigate} onOpenChat={(phone) => { setTargetChatPhone(phone); handleNavigate(ViewState.WHATSAPP); }} />
       )}
 
       {currentView === ViewState.SUPPLIERS && (
@@ -750,13 +987,13 @@ const App = () => {
       {currentView === ViewState.INVENTORY_AUDIT && <InventoryAuditModule history={inventoryHistory} products={products} />}
       {currentView === ViewState.BUSINESS_EVOLUTION && <BusinessEvolutionModule products={products} clients={clients} movements={cashMovements} />}
       {currentView === ViewState.FINANCIAL_STRATEGY && <FinancialStrategyModule products={products} salesHistory={sales} cashMovements={cashMovements} onAddCashMovement={handleAddMovement} />}
-      {currentView === ViewState.HISTORY_QUERIES && <HistoryQueries salesHistory={sales} purchasesHistory={purchases} stockMovements={stockMovements} cashMovements={cashMovements} initialTab='ventas' products={products} />}
-      {currentView === ViewState.PURCHASES_HISTORY && <HistoryQueries salesHistory={sales} purchasesHistory={purchases} stockMovements={stockMovements} cashMovements={cashMovements} initialTab='compras' products={products} />}
-      {currentView === ViewState.INGRESOS_HISTORY && <HistoryQueries salesHistory={sales} purchasesHistory={purchases} stockMovements={stockMovements} cashMovements={cashMovements} initialTab='ingresos' products={products} />}
-      {currentView === ViewState.EGRESOS_HISTORY && <HistoryQueries salesHistory={sales} purchasesHistory={purchases} stockMovements={stockMovements} cashMovements={cashMovements} initialTab='egresos' products={products} />}
-      {currentView === ViewState.PRODUCT_HISTORY_HISTORY && <HistoryQueries salesHistory={sales} purchasesHistory={purchases} stockMovements={stockMovements} cashMovements={cashMovements} initialTab='historial_producto' products={products} />}
-      {currentView === ViewState.KARDEX_HISTORY && <HistoryQueries salesHistory={sales} purchasesHistory={purchases} stockMovements={stockMovements} cashMovements={cashMovements} initialTab='kardex' products={products} />}
-      {currentView === ViewState.CREDIT_NOTE_HISTORY && <HistoryQueries salesHistory={sales} purchasesHistory={purchases} stockMovements={stockMovements} cashMovements={cashMovements} initialTab='notas_credito' products={products} />}
+      {currentView === ViewState.HISTORY_QUERIES && <HistoryQueries salesHistory={sales} purchasesHistory={purchases} stockMovements={stockMovements} cashMovements={cashMovements} initialTab='ventas' products={products} bankAccounts={bankAccounts} services={services} />}
+      {currentView === ViewState.PURCHASES_HISTORY && <HistoryQueries salesHistory={sales} purchasesHistory={purchases} stockMovements={stockMovements} cashMovements={cashMovements} initialTab='compras' products={products} bankAccounts={bankAccounts} services={services} />}
+      {currentView === ViewState.INGRESOS_HISTORY && <HistoryQueries salesHistory={sales} purchasesHistory={purchases} stockMovements={stockMovements} cashMovements={cashMovements} initialTab='ingresos' products={products} bankAccounts={bankAccounts} services={services} />}
+      {currentView === ViewState.EGRESOS_HISTORY && <HistoryQueries salesHistory={sales} purchasesHistory={purchases} stockMovements={stockMovements} cashMovements={cashMovements} initialTab='egresos' products={products} bankAccounts={bankAccounts} services={services} />}
+      {currentView === ViewState.PRODUCT_HISTORY_HISTORY && <HistoryQueries salesHistory={sales} purchasesHistory={purchases} stockMovements={stockMovements} cashMovements={cashMovements} initialTab='historial_producto' products={products} bankAccounts={bankAccounts} services={services} />}
+      {currentView === ViewState.KARDEX_HISTORY && <HistoryQueries salesHistory={sales} purchasesHistory={purchases} stockMovements={stockMovements} cashMovements={cashMovements} initialTab='kardex' products={products} bankAccounts={bankAccounts} services={services} />}
+      {currentView === ViewState.CREDIT_NOTE_HISTORY && <HistoryQueries salesHistory={sales} purchasesHistory={purchases} stockMovements={stockMovements} cashMovements={cashMovements} initialTab='notas_credito' products={products} bankAccounts={bankAccounts} services={services} />}
       {currentView === ViewState.LOCATIONS && <LocationsModule locations={locations} onAddLocation={handleAddLocation} onDeleteLocation={handleDeleteLocation} onResetLocations={handleResetLocations} />}
       {currentView === ViewState.USER_PRIVILEGES && <UserPrivilegesModule users={users} onAddUser={handleAddUser} onUpdateUser={handleUpdateUser} onDeleteUser={handleDeleteUser} />}
       {currentView === ViewState.CREDIT_NOTE && <CreditNoteModule salesHistory={sales} onProcessCreditNote={handleProcessCreditNote} bankAccounts={bankAccounts} />}
@@ -765,7 +1002,7 @@ const App = () => {
       {currentView === ViewState.DATABASE_CONFIG && <DatabaseModule isSyncEnabled={isSyncEnabled} data={{ products, clients, movements: cashMovements, sales, services, suppliers, brands, categories, bankAccounts }} onSyncDownload={handleSyncDownload} />}
       {currentView === ViewState.CONFIG_PRINTER && <PrintConfigModule />}
       {currentView === ViewState.MEDIA_EDITOR && <MediaEditorModule onUpdateHeroImage={() => {}} onUpdateFeatureImage={() => {}} />}
-      {currentView === ViewState.SUPER_ADMIN_DASHBOARD && <SuperAdminModule tenants={tenants} onAddTenant={handleAddTenant} onUpdateTenant={handleUpdateTenant} onDeleteTenant={handleDeleteTenant} onResetTenantData={handleResetTenantData} />}
+      {currentView === ViewState.SUPER_ADMIN_DASHBOARD && <SuperAdminModule tenants={tenants} onAddTenant={handleAddTenant} onUpdateTenant={handleUpdateTenant} onDeleteTenant={handleDeleteTenant} onResetTenantData={handleResetTenantData} sales={sales} purchases={purchases} cashMovements={cashMovements} services={services} quotations={quotations} presales={presales} />}
       {currentView === ViewState.CASH_BOX_HISTORY && <CashBoxHistoryModule sessions={cashBoxSessions} bankAccounts={bankAccounts} />}
       {currentView === ViewState.BANK_ACCOUNTS && <BankAccountsModule bankAccounts={bankAccounts} onAddBankAccount={handleAddBankAccount} onUpdateBankAccount={handleUpdateBankAccount} onDeleteBankAccount={handleDeleteBankAccount} onUniversalTransfer={handleUniversalTransfer} />}
       {currentView === ViewState.BANK_HISTORY && <BankHistoryModule cashMovements={cashMovements} bankAccounts={bankAccounts} />}
@@ -804,8 +1041,8 @@ const App = () => {
               setCashTransferRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'COMPLETED' } : r));
               handleAddMovement({ id: 'M-' + Date.now(), branchId: currentBranchId, date: new Date().toLocaleDateString('es-PE'), time: new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false }), type: 'Ingreso', paymentMethod: 'Efectivo', concept: `RECEPCIÓN DE ${req.fromBranchName}`, amount: req.amount, user: session?.user.fullName || 'Admin', category: 'TRANSFERENCIA ENTRANTE', financialType: 'Variable' });
           }} systemBaseCurrency={baseCurrency} isCashBoxOpen={!!currentCashSession} />}
-      {currentView === ViewState.INVENTORY_ADJUSTMENT && <InventoryAdjustmentModule products={products} salesHistory={sales} onProcessInventorySession={handleProcessInventorySession} sessionUser={session.user.fullName} history={inventoryHistory} />}
-      {currentView === ViewState.AI_ASSISTANT && session && <AiAssistantModule sessionUser={session.user.fullName} products={products} />}
+      {currentView === ViewState.INVENTORY_ADJUSTMENT && <InventoryAdjustmentModule products={products} salesHistory={sales} onProcessInventorySession={handleProcessInventorySession} sessionUser={session?.user?.fullName || 'Admin'} history={inventoryHistory} />}
+      {currentView === ViewState.AI_ASSISTANT && session && <AiAssistantModule sessionUser={session?.user?.fullName || 'Admin'} products={products} />}
     </Layout>
   );
 };

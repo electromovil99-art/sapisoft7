@@ -134,28 +134,28 @@ const CompanyProfileModule: React.FC<CompanyProfileProps> = ({
                     </div>
 
                     {/* CONFIGURACIÓN REGIONAL / MONEDA */}
-                    <div className="bg-slate-900 dark:bg-slate-800/50 p-8 rounded-[2.5rem] shadow-xl border border-slate-700 dark:border-slate-700 relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-8 opacity-10"><Globe size={120} className="text-white"/></div>
+                    <div className="bg-white dark:bg-slate-800/50 p-8 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-8 opacity-5 dark:opacity-10"><Globe size={120} className="text-slate-900 dark:text-white"/></div>
                         <div className="relative z-10">
-                            <h3 className="font-black text-xs uppercase tracking-[0.2em] text-primary-400 mb-6 flex items-center gap-2">Configuración Regional</h3>
+                            <h3 className="font-black text-xs uppercase tracking-[0.2em] text-primary-600 dark:text-primary-400 mb-6 flex items-center gap-2">Configuración Regional</h3>
                             <div className="max-w-md space-y-4">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Moneda Base del Sistema (Default)</label>
+                                    <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Moneda Base del Sistema (Default)</label>
                                     <div className="relative">
                                         <Landmark className="absolute left-4 top-1/2 -translate-y-1/2 text-primary-500" size={18}/>
                                         <select 
                                             value={selectedCurrency}
                                             onChange={e => setSelectedCurrency(e.target.value)}
-                                            className="w-full pl-12 pr-10 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-black text-sm appearance-none outline-none focus:ring-2 focus:ring-primary-500 transition-all uppercase cursor-pointer"
+                                            className="w-full pl-12 pr-10 py-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl text-slate-900 dark:text-white font-black text-sm appearance-none outline-none focus:ring-2 focus:ring-primary-500 transition-all uppercase cursor-pointer"
                                         >
                                             {COMMON_CURRENCIES.map(curr => (
-                                                <option key={curr.code} value={curr.code} className="bg-slate-900 text-white font-bold">
+                                                <option key={curr.code} value={curr.code} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-bold">
                                                     {curr.flag} {curr.name}
                                                 </option>
                                             ))}
                                         </select>
                                     </div>
-                                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tight leading-relaxed px-1">
+                                    <p className="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-tight leading-relaxed px-1">
                                         Esta moneda se utilizará por defecto en el Punto de Venta y Almacén. Todas las valorizaciones se calcularán en esta divisa.
                                     </p>
                                 </div>

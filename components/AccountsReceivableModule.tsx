@@ -15,6 +15,7 @@ const AccountsReceivableModule: React.FC<AccountsReceivableProps> = ({ clients, 
     const [selectedClient, setSelectedClient] = useState<Client | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [mobileView, setMobileView] = useState<'list' | 'detail'>('list');
     
     // Payment Logic State
     // Stores allocation per item per ticket. Key: `${ticketId}_${itemId}`, Value: amount
@@ -166,12 +167,12 @@ const AccountsReceivableModule: React.FC<AccountsReceivableProps> = ({ clients, 
     };
 
     return (
-        <div className="flex h-full gap-6 animate-in fade-in duration-500">
+        <div className="flex flex-col md:flex-row h-full gap-4 md:gap-6 animate-in fade-in duration-500">
             {/* Left: Client List */}
-            <div className="w-1/3 bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden">
-                <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50">
-                    <h2 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tight flex items-center gap-2">
-                        <User className="text-emerald-500"/> Clientes con Deuda
+            <div className={`w-full md:w-1/3 bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden ${selectedClient && mobileView === 'detail' ? 'hidden md:flex' : 'flex'}`}>
+                <div className="p-4 md:p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50">
+                    <h2 className="text-base md:text-lg font-black text-slate-800 dark:text-white uppercase tracking-tight flex items-center gap-2">
+                        <User className="text-emerald-500" size={18}/> Clientes con Deuda
                     </h2>
                     <div className="mt-4 relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16}/>
@@ -184,7 +185,7 @@ const AccountsReceivableModule: React.FC<AccountsReceivableProps> = ({ clients, 
                         />
                     </div>
                 </div>
-                <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-2">
                     {filteredClients.map(c => {
                         const debt = pendingSales.filter(s => s.clientName === c.name).reduce((acc, s) => {
                             const paid = (s.detailedPayments || []).reduce((a: number, p: any) => a + (Number(p.amount) || 0), 0);
@@ -194,7 +195,7 @@ const AccountsReceivableModule: React.FC<AccountsReceivableProps> = ({ clients, 
                         return (
                             <div 
                                 key={c.id} 
-                                onClick={() => setSelectedClient(c)}
+                                onClick={() => { setSelectedClient(c); setMobileView('detail'); }}
                                 className={`p-4 rounded-2xl border cursor-pointer transition-all ${selectedClient?.id === c.id ? 'bg-emerald-50 border-emerald-500 shadow-md ring-1 ring-emerald-500/20' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-700 hover:border-emerald-200'}`}
                             >
                                 <div className="flex justify-between items-start">
@@ -215,17 +216,25 @@ const AccountsReceivableModule: React.FC<AccountsReceivableProps> = ({ clients, 
             </div>
 
             {/* Right: Debts & Payment */}
-            <div className="flex-1 flex flex-col gap-4">
+            <div className={`flex-1 flex flex-col gap-4 ${!selectedClient || mobileView === 'list' ? 'hidden md:flex' : 'flex'}`}>
                 {selectedClient ? (
                     <>
-                        <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 flex justify-between items-center">
-                            <div>
-                                <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight">{selectedClient.name}</h3>
-                                <p className="text-xs font-bold text-slate-400">Documentos Pendientes de Pago</p>
+                        <div className="bg-white dark:bg-slate-800 p-4 md:p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <div className="flex items-center gap-3">
+                                <button 
+                                    onClick={() => setMobileView('list')}
+                                    className="md:hidden p-2 bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-300"
+                                >
+                                    <ChevronRight size={20} className="rotate-180"/>
+                                </button>
+                                <div>
+                                    <h3 className="text-lg md:text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight truncate max-w-[200px] md:max-w-none">{selectedClient.name}</h3>
+                                    <p className="text-[10px] md:text-xs font-bold text-slate-400">Documentos Pendientes de Pago</p>
+                                </div>
                             </div>
                             <button 
                                 onClick={() => { setItemAllocations({}); setReceivedAmountInput(''); setShowPaymentModal(true); }}
-                                className="bg-emerald-600 text-white px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg active:scale-95 flex items-center gap-2"
+                                className="w-full md:w-auto bg-emerald-600 text-white px-6 md:px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2"
                             >
                                 <DollarSign size={16}/> Registrar Abono
                             </button>
@@ -233,7 +242,7 @@ const AccountsReceivableModule: React.FC<AccountsReceivableProps> = ({ clients, 
 
                         {/* List of Sales */}
                         <div className="flex-1 bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col">
-                            <div className="flex-1 overflow-auto p-6 space-y-4">
+                            <div className="flex-1 overflow-auto p-4 md:p-6 space-y-4">
                                 {clientDebts.map(debt => {
                                     const paid = (debt.detailedPayments || []).reduce((acc: number, p: any) => acc + (Number(p.amount) || 0), 0);
                                     const balance = debt.total - paid;
@@ -241,31 +250,31 @@ const AccountsReceivableModule: React.FC<AccountsReceivableProps> = ({ clients, 
 
                                     return (
                                         <div key={debt.id} className="border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden hover:shadow-md transition-all">
-                                            <div className="p-4 bg-white dark:bg-slate-900 flex justify-between items-center">
-                                                <div className="flex gap-4 items-center">
-                                                    <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-500">
-                                                        <FileText size={20}/>
+                                            <div className="p-4 bg-white dark:bg-slate-900 flex flex-col lg:flex-row justify-between lg:items-center gap-4">
+                                                <div className="flex gap-3 md:gap-4 items-center">
+                                                    <div className="p-2.5 md:p-3 bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-500 shrink-0">
+                                                        <FileText size={18} className="md:w-5 md:h-5"/>
                                                     </div>
-                                                    <div>
+                                                    <div className="min-w-0">
                                                         <div className="flex items-center gap-2">
-                                                            <span className="font-black text-sm text-slate-800 dark:text-white uppercase">{debt.docType}</span>
-                                                            <span className="text-[10px] font-mono text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">#{debt.id.substring(0,8)}</span>
+                                                            <span className="font-black text-xs md:text-sm text-slate-800 dark:text-white uppercase truncate">{debt.docType}</span>
+                                                            <span className="text-[9px] md:text-[10px] font-mono text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded shrink-0">#{debt.id.substring(0,8)}</span>
                                                         </div>
-                                                        <p className="text-[10px] font-bold text-slate-400 mt-0.5">{debt.date} • {debt.time}</p>
+                                                        <p className="text-[9px] md:text-[10px] font-bold text-slate-400 mt-0.5">{debt.date} • {debt.time}</p>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-8">
-                                                    <div className="text-right">
-                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total</p>
-                                                        <p className="font-bold text-slate-700 dark:text-white">S/ {debt.total.toFixed(2)}</p>
+                                                <div className="flex items-center justify-between lg:justify-end gap-4 md:gap-8 border-t lg:border-t-0 border-slate-50 dark:border-slate-800 pt-3 lg:pt-0">
+                                                    <div className="text-right hidden sm:block">
+                                                        <p className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest">Total</p>
+                                                        <p className="text-xs md:text-sm font-bold text-slate-700 dark:text-white">S/ {debt.total.toFixed(2)}</p>
                                                     </div>
                                                     <div className="text-right">
-                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Abonado</p>
-                                                        <p className="font-bold text-emerald-600">S/ {paid.toFixed(2)}</p>
+                                                        <p className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest">Abonado</p>
+                                                        <p className="text-xs md:text-sm font-bold text-emerald-600">S/ {paid.toFixed(2)}</p>
                                                     </div>
                                                     <div className="text-right">
-                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Saldo</p>
-                                                        <p className="font-black text-lg text-red-500">S/ {balance.toFixed(2)}</p>
+                                                        <p className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest">Saldo</p>
+                                                        <p className="font-black text-base md:text-lg text-red-500">S/ {balance.toFixed(2)}</p>
                                                     </div>
                                                     <button 
                                                         onClick={() => setShowHistoryForTicket(isExpanded ? null : debt.id)} 
@@ -321,32 +330,32 @@ const AccountsReceivableModule: React.FC<AccountsReceivableProps> = ({ clients, 
 
             {/* Payment Modal with Detailed Item List */}
             {showPaymentModal && selectedClient && (
-                <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[2000] flex items-center justify-center p-4">
-                    <div className="bg-white dark:bg-slate-800 w-full max-w-5xl h-[90vh] rounded-[3rem] shadow-2xl border border-white/20 animate-in zoom-in-95 overflow-hidden flex flex-col">
-                        <div className="p-8 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50">
-                            <div>
-                                <h3 className="font-black text-xl text-slate-800 dark:text-white uppercase tracking-tighter flex items-center gap-3">
-                                    <Wallet size={24} className="text-emerald-500"/> Registrar Cobro Detallado
+                <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[2000] flex items-center justify-center p-2 md:p-4">
+                    <div className="bg-white dark:bg-slate-800 w-full max-w-5xl h-[95vh] md:h-[90vh] rounded-3xl md:rounded-[3rem] shadow-2xl border border-white/20 animate-in zoom-in-95 overflow-hidden flex flex-col">
+                        <div className="p-4 md:p-8 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50">
+                            <div className="min-w-0">
+                                <h3 className="font-black text-lg md:text-xl text-slate-800 dark:text-white uppercase tracking-tighter flex items-center gap-2 md:gap-3">
+                                    <Wallet size={20} className="text-emerald-500 shrink-0"/> <span className="truncate">Registrar Cobro Detallado</span>
                                 </h3>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Cliente: {selectedClient.name}</p>
+                                <p className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 truncate">Cliente: {selectedClient.name}</p>
                             </div>
-                            <button onClick={() => setShowPaymentModal(false)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"><X size={24}/></button>
+                            <button onClick={() => setShowPaymentModal(false)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors shrink-0"><X size={20}/></button>
                         </div>
                         
-                        <div className="flex-1 flex overflow-hidden">
+                        <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
                             {/* Left: Input & Method */}
-                            <div className="w-[340px] bg-slate-50 dark:bg-slate-900/50 border-r border-slate-100 dark:border-slate-700 p-8 flex flex-col gap-6 overflow-y-auto">
+                            <div className="w-full md:w-[340px] bg-slate-50 dark:bg-slate-900/50 border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-700 p-4 md:p-8 flex flex-col gap-4 md:gap-6 overflow-y-auto shrink-0">
                                 
                                 {paymentMethod === 'Efectivo' && !isCashBoxOpen && (
-                                    <div className="p-4 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300 rounded-2xl text-[10px] font-bold uppercase border border-red-200 dark:border-red-800 flex items-center gap-2">
-                                        <Lock size={20}/>
+                                    <div className="p-3 md:p-4 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300 rounded-2xl text-[9px] md:text-[10px] font-bold uppercase border border-red-200 dark:border-red-800 flex items-center gap-2">
+                                        <Lock size={18} className="shrink-0"/>
                                         Caja Cerrada. No se puede cobrar en efectivo.
                                     </div>
                                 )}
 
                                 <div className="space-y-3">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Método de Cobro</label>
-                                    <div className="grid grid-cols-2 gap-2">
+                                    <label className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest block">Método de Cobro</label>
+                                    <div className="grid grid-cols-4 md:grid-cols-2 gap-2">
                                         {[
                                             { id: 'Efectivo', icon: Banknote },
                                             { id: 'Yape', icon: QrCode },
@@ -356,38 +365,38 @@ const AccountsReceivableModule: React.FC<AccountsReceivableProps> = ({ clients, 
                                             <button 
                                                 key={m.id}
                                                 onClick={() => setPaymentMethod(m.id as PaymentMethodType)}
-                                                className={`p-3 rounded-xl border-2 flex flex-col items-center justify-center gap-1 transition-all ${paymentMethod === m.id ? 'bg-emerald-50 border-emerald-500 text-emerald-700' : 'bg-white border-slate-200 text-slate-500 hover:border-emerald-200'}`}
+                                                className={`p-2 md:p-3 rounded-xl border-2 flex flex-col items-center justify-center gap-1 transition-all ${paymentMethod === m.id ? 'bg-emerald-50 border-emerald-500 text-emerald-700' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 hover:border-emerald-200'}`}
                                             >
-                                                <m.icon size={18}/>
-                                                <span className="text-[9px] font-black uppercase">{m.id}</span>
+                                                <m.icon size={16}/>
+                                                <span className="text-[8px] md:text-[9px] font-black uppercase">{m.id}</span>
                                             </button>
                                         ))}
                                     </div>
                                 </div>
 
                                 {paymentMethod !== 'Efectivo' && (
-                                    <div className="space-y-4 animate-in slide-in-from-top-2">
+                                    <div className="grid grid-cols-2 md:grid-cols-1 gap-3 md:gap-4 animate-in slide-in-from-top-2">
                                         <div>
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Cuenta Destino</label>
-                                            <select className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl text-xs font-bold outline-none" value={paymentAccountId} onChange={e => setPaymentAccountId(e.target.value)}>
+                                            <label className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Cuenta Destino</label>
+                                            <select className="w-full p-2.5 md:p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl text-xs font-bold outline-none" value={paymentAccountId} onChange={e => setPaymentAccountId(e.target.value)}>
                                                 <option value="">-- Seleccionar --</option>
                                                 {bankAccounts.map(b => <option key={b.id} value={b.id}>{b.alias || b.bankName}</option>)}
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Nro. Operación</label>
-                                            <input type="text" className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl text-xs font-bold outline-none" value={paymentReference} onChange={e => setPaymentReference(e.target.value)} placeholder="Ref..." />
+                                            <label className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Nro. Operación</label>
+                                            <input type="text" className="w-full p-2.5 md:p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl text-xs font-bold outline-none" value={paymentReference} onChange={e => setPaymentReference(e.target.value)} placeholder="Ref..." />
                                         </div>
                                     </div>
                                 )}
                                 
                                 <div className="space-y-2 border-t border-slate-200 dark:border-slate-700 pt-4">
-                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Monto Recibido</label>
+                                     <label className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest block">Monto Recibido</label>
                                      <div className="relative">
                                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-black text-slate-400">S/</span>
                                         <input 
                                             type="number" 
-                                            className="w-full pl-10 p-4 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-600 rounded-2xl text-2xl font-black text-slate-800 dark:text-white outline-none focus:border-emerald-500 transition-colors"
+                                            className="w-full pl-10 p-3 md:p-4 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-600 rounded-2xl text-xl md:text-2xl font-black text-slate-800 dark:text-white outline-none focus:border-emerald-500 transition-colors"
                                             value={receivedAmountInput}
                                             onChange={e => setReceivedAmountInput(e.target.value)}
                                             placeholder="0.00"
@@ -395,13 +404,13 @@ const AccountsReceivableModule: React.FC<AccountsReceivableProps> = ({ clients, 
                                      </div>
                                 </div>
 
-                                <div className="mt-auto bg-slate-100 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-2">
-                                    <div className="flex justify-between items-center text-xs">
+                                <div className="bg-slate-100 dark:bg-slate-800/50 p-3 md:p-4 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-2">
+                                    <div className="flex justify-between items-center text-[10px] md:text-xs">
                                         <span className="font-bold text-slate-500 uppercase">Asignado a Deuda:</span>
                                         <span className="font-black text-slate-800 dark:text-white">S/ {totalAllocated.toFixed(2)}</span>
                                     </div>
                                     {walletExcess > 0 && (
-                                        <div className="flex justify-between items-center text-xs text-emerald-600 font-bold bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-lg">
+                                        <div className="flex justify-between items-center text-[10px] md:text-xs text-emerald-600 font-bold bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-lg">
                                             <span className="uppercase flex items-center gap-1"><ArrowDownLeft size={12}/> A Billetera:</span>
                                             <span>S/ {walletExcess.toFixed(2)}</span>
                                         </div>
@@ -411,7 +420,7 @@ const AccountsReceivableModule: React.FC<AccountsReceivableProps> = ({ clients, 
                                 <button 
                                     onClick={handleConfirmPayment}
                                     disabled={totalAllocated <= 0 || (paymentMethod === 'Efectivo' && !isCashBoxOpen)}
-                                    className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl hover:bg-slate-800 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="w-full py-3 md:py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl hover:bg-slate-800 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     Confirmar Cobro
                                 </button>
@@ -419,10 +428,10 @@ const AccountsReceivableModule: React.FC<AccountsReceivableProps> = ({ clients, 
 
                             {/* Right: Detailed List */}
                             <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-900">
-                                <div className="p-6 bg-slate-50 dark:bg-slate-950 border-b border-slate-100 dark:border-slate-800">
-                                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><CheckCircle size={14}/> Seleccione Items a Amortizar</h4>
+                                <div className="p-4 md:p-6 bg-slate-50 dark:bg-slate-950 border-b border-slate-100 dark:border-slate-800">
+                                    <h4 className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><CheckCircle size={14}/> Seleccione Items a Amortizar</h4>
                                 </div>
-                                <div className="flex-1 overflow-auto p-6 space-y-4">
+                                <div className="flex-1 overflow-auto p-4 md:p-6 space-y-4">
                                     {clientDebts.map(debt => {
                                         const paid = (debt.detailedPayments || []).reduce((acc: number, p: any) => acc + (Number(p.amount) || 0), 0);
                                         const balance = debt.total - paid;
@@ -431,21 +440,21 @@ const AccountsReceivableModule: React.FC<AccountsReceivableProps> = ({ clients, 
                                         return (
                                             <div key={debt.id} className="border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden transition-all shadow-sm hover:shadow-md">
                                                 <div 
-                                                    className={`p-4 flex justify-between items-center cursor-pointer transition-colors ${isExpanded ? 'bg-slate-50 dark:bg-slate-800' : 'bg-white dark:bg-slate-900'}`}
+                                                    className={`p-3 md:p-4 flex justify-between items-center cursor-pointer transition-colors ${isExpanded ? 'bg-slate-50 dark:bg-slate-800' : 'bg-white dark:bg-slate-900'}`}
                                                     onClick={() => toggleTicketExpand(debt.id)}
                                                 >
-                                                    <div className="flex items-center gap-3">
-                                                        <div className={`p-2 rounded-lg ${isExpanded ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-500'}`}>
-                                                            {isExpanded ? <ChevronUp size={16}/> : <ChevronDown size={16}/>}
+                                                    <div className="flex items-center gap-2 md:gap-3 min-w-0">
+                                                        <div className={`p-1.5 md:p-2 rounded-lg shrink-0 ${isExpanded ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-500'}`}>
+                                                            {isExpanded ? <ChevronUp size={14}/> : <ChevronDown size={14}/>}
                                                         </div>
-                                                        <div>
-                                                            <p className="font-black text-xs text-slate-800 dark:text-white uppercase">{debt.docType} #{debt.id.substring(0,8)}</p>
-                                                            <p className="text-[10px] font-bold text-slate-400">{debt.date} • Total: S/ {debt.total.toFixed(2)}</p>
+                                                        <div className="min-w-0">
+                                                            <p className="font-black text-[10px] md:text-xs text-slate-800 dark:text-white uppercase truncate">{debt.docType} #{debt.id.substring(0,8)}</p>
+                                                            <p className="text-[8px] md:text-[10px] font-bold text-slate-400">{debt.date} • Total: S/ {debt.total.toFixed(2)}</p>
                                                         </div>
                                                     </div>
-                                                    <div className="text-right">
-                                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Saldo Pendiente</p>
-                                                        <p className="text-sm font-black text-red-500">S/ {balance.toFixed(2)}</p>
+                                                    <div className="text-right shrink-0">
+                                                        <p className="text-[8px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest">Saldo</p>
+                                                        <p className="text-xs md:text-sm font-black text-red-500">S/ {balance.toFixed(2)}</p>
                                                     </div>
                                                 </div>
 
@@ -481,6 +490,7 @@ const AccountsReceivableModule: React.FC<AccountsReceivableProps> = ({ clients, 
                                                                         {itemBalance > 0.01 ? (
                                                                              <input 
                                                                                 type="number" 
+                                             onWheel={(e) => (e.target as HTMLInputElement).blur()}
                                                                                 className={`w-full p-2 rounded-lg text-right font-black text-xs outline-none border transition-all ${currentAlloc ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white'}`}
                                                                                 placeholder={itemBalance.toFixed(2)}
                                                                                 value={currentAlloc}

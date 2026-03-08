@@ -15,6 +15,7 @@ const AccountsPayableModule: React.FC<AccountsPayableProps> = ({ suppliers, purc
     const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [mobileView, setMobileView] = useState<'list' | 'detail'>('list');
     
     // Payment Logic State
     // Stores allocation per item per ticket. Key: `${purchaseId}_${itemId}`, Value: amount
@@ -159,14 +160,14 @@ const AccountsPayableModule: React.FC<AccountsPayableProps> = ({ suppliers, purc
     };
 
     return (
-        <div className="flex h-full gap-6 animate-in fade-in duration-500">
+        <div className="flex flex-col md:flex-row h-full gap-4 md:gap-6 animate-in fade-in duration-500">
             {/* Left: Supplier List */}
-            <div className="w-1/3 bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden">
-                <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50">
-                    <h2 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tight flex items-center gap-2">
-                        <Truck className="text-orange-500"/> Proveedores por Pagar
+            <div className={`w-full md:w-1/3 bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden ${selectedSupplier && mobileView === 'detail' ? 'hidden md:flex' : 'flex'}`}>
+                <div className="p-4 md:p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50">
+                    <h2 className="text-base md:text-lg font-black text-slate-800 dark:text-white uppercase tracking-tight flex items-center gap-2">
+                        <Truck className="text-orange-500" size={20}/> Proveedores por Pagar
                     </h2>
-                    <div className="mt-4 relative">
+                    <div className="mt-3 md:mt-4 relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16}/>
                         <input 
                             type="text" 
@@ -177,7 +178,7 @@ const AccountsPayableModule: React.FC<AccountsPayableProps> = ({ suppliers, purc
                         />
                     </div>
                 </div>
-                <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-2">
                     {filteredSuppliers.map(s => {
                         const debt = pendingPurchases.filter(p => p.supplierName === s.name).reduce((acc, p) => {
                             const paid = (p.detailedPayments || []).reduce((a: number, pay: any) => a + (Number(pay.amount) || 0), 0);
@@ -187,8 +188,8 @@ const AccountsPayableModule: React.FC<AccountsPayableProps> = ({ suppliers, purc
                         return (
                             <div 
                                 key={s.id} 
-                                onClick={() => setSelectedSupplier(s)}
-                                className={`p-4 rounded-2xl border cursor-pointer transition-all ${selectedSupplier?.id === s.id ? 'bg-orange-50 border-orange-500 shadow-md ring-1 ring-orange-500/20' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-700 hover:border-orange-200'}`}
+                                onClick={() => { setSelectedSupplier(s); setMobileView('detail'); }}
+                                className={`p-3 md:p-4 rounded-2xl border cursor-pointer transition-all ${selectedSupplier?.id === s.id ? 'bg-orange-50 border-orange-500 shadow-md ring-1 ring-orange-500/20' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-700 hover:border-orange-200'}`}
                             >
                                 <div className="flex justify-between items-start">
                                     <div className="min-w-0">
@@ -197,7 +198,7 @@ const AccountsPayableModule: React.FC<AccountsPayableProps> = ({ suppliers, purc
                                     </div>
                                     <ChevronRight size={16} className={`text-slate-300 transition-transform ${selectedSupplier?.id === s.id ? 'rotate-90 text-orange-500' : ''}`}/>
                                 </div>
-                                <div className="mt-3 flex justify-between items-end border-t border-slate-100 dark:border-slate-800 pt-2">
+                                <div className="mt-2 md:mt-3 flex justify-between items-end border-t border-slate-100 dark:border-slate-800 pt-2">
                                     <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">A Pagar</span>
                                     <span className="text-sm font-black text-red-500">S/ {debt.toFixed(2)}</span>
                                 </div>
@@ -208,24 +209,32 @@ const AccountsPayableModule: React.FC<AccountsPayableProps> = ({ suppliers, purc
             </div>
 
             {/* Right: Debts & Payment */}
-            <div className="flex-1 flex flex-col gap-4">
+            <div className={`flex-1 flex flex-col gap-4 ${!selectedSupplier || mobileView === 'list' ? 'hidden md:flex' : 'flex'}`}>
                 {selectedSupplier ? (
                     <>
-                        <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 flex justify-between items-center">
-                            <div>
-                                <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight">{selectedSupplier.name}</h3>
-                                <p className="text-xs font-bold text-slate-400">Facturas Pendientes</p>
+                        <div className="bg-white dark:bg-slate-800 p-4 md:p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <div className="flex items-center gap-3">
+                                <button 
+                                    onClick={() => setMobileView('list')}
+                                    className="md:hidden p-2 bg-slate-100 dark:bg-slate-700 rounded-xl text-slate-600 dark:text-slate-300"
+                                >
+                                    <ChevronRight size={20} className="rotate-180"/>
+                                </button>
+                                <div>
+                                    <h3 className="text-lg md:text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight truncate max-w-[200px] md:max-w-none">{selectedSupplier.name}</h3>
+                                    <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase">Facturas Pendientes</p>
+                                </div>
                             </div>
                             <button 
                                 onClick={() => { setItemAllocations({}); setReceivedAmountInput(''); setShowPaymentModal(true); }}
-                                className="bg-orange-600 text-white px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-orange-700 transition-all shadow-lg active:scale-95 flex items-center gap-2"
+                                className="w-full md:w-auto bg-orange-600 text-white px-6 md:px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-orange-700 transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2"
                             >
                                 <DollarSign size={16}/> Pagar Deuda
                             </button>
                         </div>
 
                         <div className="flex-1 bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col">
-                            <div className="flex-1 overflow-auto p-6 space-y-4">
+                            <div className="flex-1 overflow-auto p-4 md:p-6 space-y-4">
                                 {supplierDebts.map(debt => {
                                     const paid = (debt.detailedPayments || []).reduce((acc: number, p: any) => acc + (Number(p.amount) || 0), 0);
                                     const balance = debt.total - paid;
@@ -233,63 +242,63 @@ const AccountsPayableModule: React.FC<AccountsPayableProps> = ({ suppliers, purc
 
                                     return (
                                         <div key={debt.id} className="border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden hover:shadow-md transition-all">
-                                            <div className="p-4 bg-white dark:bg-slate-900 flex justify-between items-center">
-                                                <div className="flex gap-4 items-center">
-                                                    <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-500">
-                                                        <FileText size={20}/>
+                                            <div className="p-3 md:p-4 bg-white dark:bg-slate-900 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                                <div className="flex gap-3 md:gap-4 items-center min-w-0">
+                                                    <div className="p-2 md:p-3 bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-500 shrink-0">
+                                                        <FileText size={18}/>
                                                     </div>
-                                                    <div>
+                                                    <div className="min-w-0">
                                                         <div className="flex items-center gap-2">
-                                                            <span className="font-black text-sm text-slate-800 dark:text-white uppercase">{debt.docType}</span>
-                                                            <span className="text-[10px] font-mono text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">Ref: {debt.id.substring(0,8)}</span>
+                                                            <span className="font-black text-xs md:text-sm text-slate-800 dark:text-white uppercase truncate">{debt.docType}</span>
+                                                            <span className="text-[8px] md:text-[10px] font-mono text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded shrink-0">#{debt.id.substring(0,8)}</span>
                                                         </div>
-                                                        <p className="text-[10px] font-bold text-slate-400 mt-0.5">{debt.date} • {debt.time}</p>
+                                                        <p className="text-[9px] md:text-[10px] font-bold text-slate-400 mt-0.5">{debt.date} • {debt.time}</p>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-8">
-                                                    <div className="text-right">
-                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total</p>
-                                                        <p className="font-bold text-slate-700 dark:text-white">S/ {debt.total.toFixed(2)}</p>
+                                                <div className="flex items-center justify-between sm:justify-end gap-4 md:gap-8 w-full sm:w-auto border-t sm:border-t-0 pt-3 sm:pt-0 border-slate-100 dark:border-slate-800">
+                                                    <div className="text-right hidden sm:block">
+                                                        <p className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest">Total</p>
+                                                        <p className="text-[10px] md:text-xs font-bold text-slate-700 dark:text-white">S/ {debt.total.toFixed(2)}</p>
                                                     </div>
                                                     <div className="text-right">
-                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Pagado</p>
-                                                        <p className="font-bold text-emerald-600">S/ {paid.toFixed(2)}</p>
+                                                        <p className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest">Pagado</p>
+                                                        <p className="text-[10px] md:text-xs font-bold text-emerald-600">S/ {paid.toFixed(2)}</p>
                                                     </div>
                                                     <div className="text-right">
-                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Saldo</p>
-                                                        <p className="font-black text-lg text-red-500">S/ {balance.toFixed(2)}</p>
+                                                        <p className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest">Saldo</p>
+                                                        <p className="font-black text-base md:text-lg text-red-500">S/ {balance.toFixed(2)}</p>
                                                     </div>
                                                     <button 
                                                         onClick={() => setShowHistoryForTicket(isExpanded ? null : debt.id)} 
-                                                        className={`p-2 rounded-lg transition-all ${isExpanded ? 'bg-slate-200 text-slate-700' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}
+                                                        className={`p-2 rounded-lg transition-all shrink-0 ${isExpanded ? 'bg-slate-200 text-slate-700' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}
                                                         title="Ver Historial de Pagos"
                                                     >
-                                                        <History size={18}/>
+                                                        <History size={16}/>
                                                     </button>
                                                 </div>
                                             </div>
 
                                             {/* EXPANDED HISTORY VIEW */}
                                             {isExpanded && (
-                                                <div className="bg-slate-50 dark:bg-slate-950/50 p-6 border-t border-slate-100 dark:border-slate-800 animate-in slide-in-from-top-2">
-                                                    <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2"><Clock size={12}/> Historial de Pagos</h4>
+                                                <div className="bg-slate-50 dark:bg-slate-950/50 p-4 md:p-6 border-t border-slate-100 dark:border-slate-800 animate-in slide-in-from-top-2">
+                                                    <h4 className="text-[9px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2"><Clock size={12}/> Historial de Pagos</h4>
                                                     
                                                     {(!debt.detailedPayments || debt.detailedPayments.length === 0) ? (
-                                                        <p className="text-xs text-slate-400 italic">No hay pagos registrados.</p>
+                                                        <p className="text-[10px] md:text-xs text-slate-400 italic">No hay pagos registrados.</p>
                                                     ) : (
                                                         <div className="space-y-2">
                                                             {debt.detailedPayments.map((p: any, i: number) => (
-                                                                <div key={i} className="flex justify-between items-center bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
-                                                                    <div className="flex items-center gap-3">
-                                                                        <div className="p-1.5 bg-emerald-100 text-emerald-600 rounded-lg"><CheckCircle size={14}/></div>
-                                                                        <div>
-                                                                            <p className="text-[10px] font-black text-slate-700 dark:text-white uppercase">{p.method} {p.bankName ? `(${p.bankName})` : ''}</p>
-                                                                            <p className="text-[9px] text-slate-400">{p.date} {p.time}</p>
+                                                                <div key={i} className="flex justify-between items-center bg-white dark:bg-slate-900 p-2.5 md:p-3 rounded-xl border border-slate-200 dark:border-slate-700">
+                                                                    <div className="flex items-center gap-2 md:gap-3 min-w-0">
+                                                                        <div className="p-1.5 bg-emerald-100 text-emerald-600 rounded-lg shrink-0"><CheckCircle size={12}/></div>
+                                                                        <div className="min-w-0">
+                                                                            <p className="text-[9px] md:text-[10px] font-black text-slate-700 dark:text-white uppercase truncate">{p.method} {p.bankName ? `(${p.bankName})` : ''}</p>
+                                                                            <p className="text-[8px] md:text-[9px] text-slate-400">{p.date} {p.time}</p>
                                                                         </div>
                                                                     </div>
-                                                                    <div className="text-right">
-                                                                        <span className="font-black text-xs text-emerald-600">+ S/ {p.amount.toFixed(2)}</span>
-                                                                        {p.reference && <p className="text-[8px] font-mono text-slate-400">REF: {p.reference}</p>}
+                                                                    <div className="text-right shrink-0">
+                                                                        <span className="font-black text-[10px] md:text-xs text-emerald-600">+ S/ {p.amount.toFixed(2)}</span>
+                                                                        {p.reference && <p className="text-[7px] md:text-[8px] font-mono text-slate-400 truncate max-w-[60px]">REF: {p.reference}</p>}
                                                                     </div>
                                                                 </div>
                                                             ))}
@@ -304,9 +313,9 @@ const AccountsPayableModule: React.FC<AccountsPayableProps> = ({ suppliers, purc
                         </div>
                     </>
                 ) : (
-                    <div className="flex-1 bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center text-slate-300 dark:text-slate-600">
-                        <FileText size={64} strokeWidth={1} className="mb-4 opacity-50"/>
-                        <p className="font-black uppercase text-xs tracking-widest">Seleccione un proveedor para ver su cuenta corriente</p>
+                    <div className="flex-1 bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center text-slate-300 dark:text-slate-600 p-8 text-center">
+                        <FileText strokeWidth={1} className="mb-4 opacity-50 w-12 h-12 md:w-16 md:h-16"/>
+                        <p className="font-black uppercase text-[10px] md:text-xs tracking-widest">Seleccione un proveedor para ver su cuenta corriente</p>
                     </div>
                 )}
             </div>
@@ -314,31 +323,31 @@ const AccountsPayableModule: React.FC<AccountsPayableProps> = ({ suppliers, purc
             {/* Payment Modal */}
             {showPaymentModal && selectedSupplier && (
                 <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[2000] flex items-center justify-center p-4">
-                    <div className="bg-white dark:bg-slate-800 w-full max-w-4xl h-[90vh] rounded-[3rem] shadow-2xl border border-white/20 animate-in zoom-in-95 overflow-hidden flex flex-col">
-                        <div className="p-8 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50">
+                    <div className="bg-white dark:bg-slate-800 w-full max-w-4xl h-full md:h-[90vh] rounded-none md:rounded-[3rem] shadow-2xl border border-white/20 animate-in zoom-in-95 overflow-hidden flex flex-col">
+                        <div className="p-4 md:p-8 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50">
                             <div>
-                                <h3 className="font-black text-xl text-slate-800 dark:text-white uppercase tracking-tighter flex items-center gap-3">
-                                    <Wallet size={24} className="text-orange-500"/> Realizar Pago Detallado
+                                <h3 className="font-black text-lg md:text-xl text-slate-800 dark:text-white uppercase tracking-tighter flex items-center gap-2 md:gap-3">
+                                    <Wallet className="text-orange-500 w-5 h-5 md:w-6 md:h-6"/> Realizar Pago Detallado
                                 </h3>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Proveedor: {selectedSupplier.name}</p>
+                                <p className="text-[8px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 truncate max-w-[200px] md:max-w-none">Proveedor: {selectedSupplier.name}</p>
                             </div>
-                            <button onClick={() => setShowPaymentModal(false)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"><X size={24}/></button>
+                            <button onClick={() => setShowPaymentModal(false)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"><X className="w-5 h-5 md:w-6 md:h-6"/></button>
                         </div>
                         
-                        <div className="flex-1 flex overflow-hidden">
+                        <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
                             {/* Left: Input & Method */}
-                            <div className="w-[340px] bg-slate-50 dark:bg-slate-900/50 border-r border-slate-100 dark:border-slate-700 p-8 flex flex-col gap-6 overflow-y-auto">
+                            <div className="w-full md:w-[340px] bg-slate-50 dark:bg-slate-900/50 border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-700 p-4 md:p-8 flex flex-col gap-4 md:gap-6 overflow-y-auto">
                                 
                                 {paymentMethod === 'Efectivo' && !isCashBoxOpen && (
-                                    <div className="p-4 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300 rounded-2xl text-[10px] font-bold uppercase border border-red-200 dark:border-red-800 flex items-center gap-2">
-                                        <Lock size={20}/>
-                                        Caja Cerrada. No se puede pagar en efectivo.
+                                    <div className="p-3 md:p-4 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300 rounded-2xl text-[9px] md:text-[10px] font-bold uppercase border border-red-200 dark:border-red-800 flex items-center gap-2">
+                                        <Lock className="w-4 h-4 md:w-5 md:h-5"/>
+                                        Caja Cerrada.
                                     </div>
                                 )}
 
-                                <div className="space-y-3">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Método de Pago</label>
-                                    <div className="grid grid-cols-2 gap-2">
+                                <div className="space-y-2 md:space-y-3">
+                                    <label className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest block">Método de Pago</label>
+                                    <div className="grid grid-cols-4 md:grid-cols-2 gap-2">
                                         {[
                                             { id: 'Efectivo', icon: Banknote },
                                             { id: 'Yape', icon: QrCode },
@@ -348,10 +357,10 @@ const AccountsPayableModule: React.FC<AccountsPayableProps> = ({ suppliers, purc
                                             <button 
                                                 key={m.id}
                                                 onClick={() => setPaymentMethod(m.id as PaymentMethodType)}
-                                                className={`p-3 rounded-xl border-2 flex flex-col items-center justify-center gap-1 transition-all ${paymentMethod === m.id ? 'bg-orange-50 border-orange-500 text-orange-700' : 'bg-white border-slate-200 text-slate-500 hover:border-orange-200'}`}
+                                                className={`p-2 md:p-3 rounded-xl border-2 flex flex-col items-center justify-center gap-1 transition-all ${paymentMethod === m.id ? 'bg-orange-50 border-orange-500 text-orange-700' : 'bg-white border-slate-200 text-slate-500 hover:border-orange-200'}`}
                                             >
-                                                <m.icon size={18}/>
-                                                <span className="text-[9px] font-black uppercase">{m.id}</span>
+                                                <m.icon className="w-4 h-4 md:w-5 md:h-5"/>
+                                                <span className="text-[7px] md:text-[9px] font-black uppercase">{m.id}</span>
                                             </button>
                                         ))}
                                     </div>
@@ -374,12 +383,13 @@ const AccountsPayableModule: React.FC<AccountsPayableProps> = ({ suppliers, purc
                                 )}
                                 
                                 <div className="space-y-2 border-t border-slate-200 dark:border-slate-700 pt-4">
-                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Monto Pagado</label>
+                                     <label className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest block">Monto Pagado</label>
                                      <div className="relative">
-                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-black text-slate-400">S/</span>
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-base md:text-lg font-black text-slate-400">S/</span>
                                         <input 
                                             type="number" 
-                                            className="w-full pl-10 p-4 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-600 rounded-2xl text-2xl font-black text-slate-800 dark:text-white outline-none focus:border-orange-500 transition-colors"
+                                            onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                                            className="w-full pl-10 p-3 md:p-4 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-600 rounded-2xl text-xl md:text-2xl font-black text-slate-800 dark:text-white outline-none focus:border-orange-500 transition-colors"
                                             value={receivedAmountInput}
                                             onChange={e => setReceivedAmountInput(e.target.value)}
                                             placeholder="0.00"
@@ -411,10 +421,10 @@ const AccountsPayableModule: React.FC<AccountsPayableProps> = ({ suppliers, purc
 
                             {/* Right: Detailed List */}
                             <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-900">
-                                <div className="p-6 bg-slate-50 dark:bg-slate-950 border-b border-slate-100 dark:border-slate-800">
-                                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><CheckCircle size={14}/> Seleccione Items a Pagar</h4>
+                                <div className="p-4 md:p-6 bg-slate-50 dark:bg-slate-950 border-b border-slate-100 dark:border-slate-800">
+                                    <h4 className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><CheckCircle size={14}/> Seleccione Items a Pagar</h4>
                                 </div>
-                                <div className="flex-1 overflow-auto p-6 space-y-4">
+                                <div className="flex-1 overflow-auto p-4 md:p-6 space-y-4">
                                     {supplierDebts.map(debt => {
                                         const paid = (debt.detailedPayments || []).reduce((acc: number, p: any) => acc + (Number(p.amount) || 0), 0);
                                         const balance = debt.total - paid;
@@ -423,27 +433,28 @@ const AccountsPayableModule: React.FC<AccountsPayableProps> = ({ suppliers, purc
                                         return (
                                             <div key={debt.id} className="border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden transition-all shadow-sm hover:shadow-md">
                                                 <div 
-                                                    className={`p-4 flex justify-between items-center cursor-pointer transition-colors ${isExpanded ? 'bg-slate-50 dark:bg-slate-800' : 'bg-white dark:bg-slate-900'}`}
+                                                    className={`p-3 md:p-4 flex justify-between items-center cursor-pointer transition-colors ${isExpanded ? 'bg-slate-50 dark:bg-slate-800' : 'bg-white dark:bg-slate-900'}`}
                                                     onClick={() => toggleTicketExpand(debt.id)}
                                                 >
-                                                    <div className="flex items-center gap-3">
-                                                        <div className={`p-2 rounded-lg ${isExpanded ? 'bg-orange-100 text-orange-600' : 'bg-slate-100 text-slate-500'}`}>
-                                                            {isExpanded ? <ChevronUp size={16}/> : <ChevronDown size={16}/>}
+                                                    <div className="flex items-center gap-2 md:gap-3 min-w-0">
+                                                        <div className={`p-1.5 md:p-2 rounded-lg shrink-0 ${isExpanded ? 'bg-orange-100 text-orange-600' : 'bg-slate-100 text-slate-500'}`}>
+                                                            {isExpanded ? <ChevronUp size={14}/> : <ChevronDown size={14}/>}
                                                         </div>
-                                                        <div>
-                                                            <p className="font-black text-xs text-slate-800 dark:text-white uppercase">{debt.docType} #{debt.id.substring(0,8)}</p>
-                                                            <p className="text-[10px] font-bold text-slate-400">{debt.date} • Total: S/ {debt.total.toFixed(2)}</p>
+                                                        <div className="min-w-0">
+                                                            <p className="font-black text-[10px] md:text-xs text-slate-800 dark:text-white uppercase truncate">{debt.docType} #{debt.id.substring(0,8)}</p>
+                                                            <p className="text-[8px] md:text-[10px] font-bold text-slate-400">{debt.date} • Total: S/ {debt.total.toFixed(2)}</p>
                                                         </div>
                                                     </div>
-                                                    <div className="text-right">
-                                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Saldo Pendiente</p>
-                                                        <p className="text-sm font-black text-red-500">S/ {balance.toFixed(2)}</p>
+                                                    <div className="text-right shrink-0">
+                                                        <p className="text-[8px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest">Saldo</p>
+                                                        <p className="text-xs md:text-sm font-black text-red-500">S/ {balance.toFixed(2)}</p>
                                                     </div>
                                                 </div>
 
                                                 {isExpanded && (
-                                                    <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 space-y-2 animate-in slide-in-from-top-2">
-                                                        <div className="grid grid-cols-[1fr_50px_70px_70px_80px_100px] gap-4 px-2 pb-2 text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200 dark:border-slate-700">
+                                                    <div className="p-2 md:p-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 space-y-2 animate-in slide-in-from-top-2">
+                                                        {/* Desktop Header */}
+                                                        <div className="hidden md:grid grid-cols-[1fr_50px_70px_70px_80px_100px] gap-2 px-2 pb-2 text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200 dark:border-slate-700">
                                                             <span>Producto</span>
                                                             <span className="text-center">Cant.</span>
                                                             <span className="text-right">Total</span>
@@ -460,30 +471,75 @@ const AccountsPayableModule: React.FC<AccountsPayableProps> = ({ suppliers, purc
                                                             const itemBalance = item.total - itemPaid;
 
                                                             return (
-                                                                <div key={idx} className="grid grid-cols-[1fr_50px_70px_70px_80px_100px] gap-4 items-center px-2 py-1">
-                                                                    <div className="flex items-center gap-2 overflow-hidden">
-                                                                        <ShoppingCart size={12} className="text-slate-400 shrink-0"/>
-                                                                        <span className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate uppercase" title={item.name}>{item.name}</span>
+                                                                <React.Fragment key={idx}>
+                                                                    {/* Desktop Row */}
+                                                                    <div className="hidden md:grid grid-cols-[1fr_50px_70px_70px_80px_100px] gap-2 items-center px-2 py-1">
+                                                                        <div className="flex items-center gap-2 overflow-hidden">
+                                                                            <ShoppingCart size={12} className="text-slate-400 shrink-0"/>
+                                                                            <span className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate uppercase" title={item.name}>{item.name}</span>
+                                                                        </div>
+                                                                        <div className="text-center text-xs font-medium text-slate-600">{item.quantity}</div>
+                                                                        <div className="text-right text-xs font-bold text-slate-600">S/ {item.total.toFixed(2)}</div>
+                                                                        <div className="text-right text-xs font-bold text-emerald-600">S/ {itemPaid.toFixed(2)}</div>
+                                                                        <div className="text-right text-xs font-bold text-red-500">S/ {itemBalance.toFixed(2)}</div>
+                                                                        <div>
+                                                                            {itemBalance > 0.01 ? (
+                                                                                <input 
+                                                                                    type="number" 
+                                                                                    onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                                                                                    className={`w-full p-2 rounded-lg text-right font-black text-xs outline-none border transition-all ${currentAlloc ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-slate-200 bg-white'}`}
+                                                                                    placeholder={itemBalance.toFixed(2)}
+                                                                                    value={currentAlloc}
+                                                                                    onChange={(e) => handleAllocateItem(debt.id, item, e.target.value)}
+                                                                                    onClick={(e) => (e.target as HTMLInputElement).select()}
+                                                                                />
+                                                                            ) : (
+                                                                                <div className="text-right text-[10px] font-black text-slate-300 uppercase">Pagado</div>
+                                                                            )}
+                                                                        </div>
                                                                     </div>
-                                                                    <div className="text-center text-xs font-medium text-slate-600">{item.quantity}</div>
-                                                                    <div className="text-right text-xs font-bold text-slate-600">S/ {item.total.toFixed(2)}</div>
-                                                                    <div className="text-right text-xs font-bold text-emerald-600">S/ {itemPaid.toFixed(2)}</div>
-                                                                    <div className="text-right text-xs font-bold text-red-500">S/ {itemBalance.toFixed(2)}</div>
-                                                                    <div>
-                                                                        {itemBalance > 0.01 ? (
-                                                                            <input 
-                                                                                type="number" 
-                                                                                className={`w-full p-2 rounded-lg text-right font-black text-xs outline-none border transition-all ${currentAlloc ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-slate-200 bg-white'}`}
-                                                                                placeholder={itemBalance.toFixed(2)}
-                                                                                value={currentAlloc}
-                                                                                onChange={(e) => handleAllocateItem(debt.id, item, e.target.value)}
-                                                                                onClick={(e) => (e.target as HTMLInputElement).select()}
-                                                                            />
-                                                                        ) : (
-                                                                            <div className="text-right text-[10px] font-black text-slate-300 uppercase">Pagado</div>
-                                                                        )}
+
+                                                                    {/* Mobile Card */}
+                                                                    <div className="md:hidden bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-700 space-y-3">
+                                                                        <div className="flex justify-between items-start gap-2">
+                                                                            <div className="flex items-center gap-2 min-w-0">
+                                                                                <ShoppingCart size={14} className="text-slate-400 shrink-0"/>
+                                                                                <span className="text-[11px] font-black text-slate-700 dark:text-slate-200 uppercase truncate">{item.name}</span>
+                                                                            </div>
+                                                                            <span className="text-[10px] font-bold text-slate-400 shrink-0">x{item.quantity}</span>
+                                                                        </div>
+                                                                        <div className="grid grid-cols-3 gap-2 py-2 border-y border-slate-50 dark:border-slate-800">
+                                                                            <div className="text-center">
+                                                                                <p className="text-[7px] font-black text-slate-400 uppercase">Total</p>
+                                                                                <p className="text-[10px] font-bold text-slate-600">S/ {item.total.toFixed(2)}</p>
+                                                                            </div>
+                                                                            <div className="text-center">
+                                                                                <p className="text-[7px] font-black text-emerald-500 uppercase">Pagado</p>
+                                                                                <p className="text-[10px] font-bold text-emerald-600">S/ {itemPaid.toFixed(2)}</p>
+                                                                            </div>
+                                                                            <div className="text-center">
+                                                                                <p className="text-[7px] font-black text-red-400 uppercase">Pendiente</p>
+                                                                                <p className="text-[10px] font-bold text-red-500">S/ {itemBalance.toFixed(2)}</p>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="flex items-center justify-between gap-4">
+                                                                            <span className="text-[9px] font-black text-slate-500 uppercase">Abonar:</span>
+                                                                            {itemBalance > 0.01 ? (
+                                                                                <input 
+                                                                                    type="number" 
+                                                                                    onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                                                                                    className={`w-24 p-2 rounded-lg text-right font-black text-xs outline-none border transition-all ${currentAlloc ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-slate-200 bg-white'}`}
+                                                                                    placeholder={itemBalance.toFixed(2)}
+                                                                                    value={currentAlloc}
+                                                                                    onChange={(e) => handleAllocateItem(debt.id, item, e.target.value)}
+                                                                                    onClick={(e) => (e.target as HTMLInputElement).select()}
+                                                                                />
+                                                                            ) : (
+                                                                                <span className="text-[9px] font-black text-emerald-500 uppercase">Completado</span>
+                                                                            )}
+                                                                        </div>
                                                                     </div>
-                                                                </div>
+                                                                </React.Fragment>
                                                             )
                                                         })}
                                                     </div>

@@ -107,7 +107,7 @@ export const INITIAL_NAV_STRUCTURE = [
       { view: ViewState.MEDIA_EDITOR, label: 'Multimedia', icon: ImageIcon, enabled: true },
       { view: ViewState.SYSTEM_DIAGNOSTICS, label: 'Diagnóstico', icon: Bug, enabled: true },
       { view: ViewState.GATEWAY_CONFIG, label: 'Pasarelas', icon: Zap, enabled: true },
-      { view: ViewState.BRANCH_MANAGEMENT, label: 'Sucursales', icon: Store, enabled: true },
+      { view: ViewState.BRANCH_MANAGEMENT, label: 'Sede Principal', icon: Store, enabled: true },
     ]
   }
 ];

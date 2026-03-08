@@ -312,8 +312,10 @@ Si te preguntan por stock, consulta los datos proporcionados.`,
                             return await chat.sendMessage({ message: userMsg.text });
                         }
                     } catch (err: any) {
-                        if ((err.message?.includes('503') || err.status === 503 || err.message?.includes('429')) && retryAttempt < 3) {
-                            console.warn(`Intento ${retryAttempt + 1} fallido (sobrecarga). Reintentando...`);
+                        if ((err.message?.includes('503') || err.status === 503 || err.message?.includes('429') || err.message?.includes('Rate exceeded')) && retryAttempt < 3) {
+                            const delay = 2000 * (retryAttempt + 1);
+                            console.warn(`Intento ${retryAttempt + 1} fallido (sobrecarga). Reintentando en ${delay}ms...`);
+                            await wait(delay);
                             return executeCall(retryAttempt + 1);
                         }
                         throw err;
@@ -363,8 +365,8 @@ Si te preguntan por stock, consulta los datos proporcionados.`,
             if (error.message.includes('503') || error.message.includes('overloaded')) {
                 errorText = `⚠️ **Servidores Saturados**\n\nEl modelo está recibiendo demasiadas peticiones. Intenta de nuevo en unos segundos.`;
             }
-            if (error.message.includes('quota') || error.message.includes('429')) {
-                errorText = `⚠️ **Créditos Agotados (OpenAI)**\n\nTu llave API ha excedido su límite de uso gratuito o de pago.\n\n👉 **Solución:** Cambia al modelo **GPT-4o Mini** (es mucho más barato) o recarga créditos en platform.openai.com.`;
+            if (error.message.includes('quota') || error.message.includes('429') || error.message.includes('Rate exceeded')) {
+                errorText = `⚠️ **Límite de Tasa Excedido**\n\nHas realizado demasiadas consultas en poco tiempo. Por favor, espera un momento antes de intentar de nuevo.`;
             }
             if (error.message.includes('context length') || error.message.includes('tokens')) {
                 errorText = `⚠️ **Memoria Llena**\n\nLa conversación es demasiado larga para el modelo. Se ha intentado recortar automáticamente. Si el error persiste, usa el botón "Limpiar Chat".`;
@@ -388,7 +390,13 @@ Si te preguntan por stock, consulta los datos proporcionados.`,
     // 1. PESTAÑA CHAT
     const renderChat = () => (
         <div className="flex flex-col h-full relative">
-            <div className="absolute top-4 right-4 z-10 flex gap-2">
+            <div className="absolute top-4 right-4 z-10 flex gap-2 items-center">
+                {/* Key Status Indicator */}
+                <div className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest border flex items-center gap-1.5 shadow-sm backdrop-blur-sm ${isCustomKey ? 'bg-emerald-100/90 text-emerald-700 border-emerald-200' : 'bg-slate-100/90 text-slate-500 border-slate-200'}`}>
+                    <Key size={12} />
+                    {isCustomKey ? 'Llave Personal' : 'Llave Sistema'}
+                </div>
+                
                 <button 
                     onClick={handleClearChat} 
                     className="p-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur border border-slate-200 dark:border-slate-700 rounded-full text-slate-500 hover:text-red-500 transition-colors shadow-sm"

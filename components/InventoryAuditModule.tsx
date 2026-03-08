@@ -42,7 +42,8 @@ const InventoryAuditModule: React.FC<InventoryAuditModuleProps> = ({ history, pr
         setAiAnalysis(null);
 
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const apiKey = localStorage.getItem('sapi_ai_google_key') || localStorage.getItem('sapi_ai_apikey') || process.env.API_KEY;
+            const ai = new GoogleGenAI({ apiKey: apiKey });
 
             const historySummary = history.slice(0, 5).map(s => ({
                 fecha: s.date,
@@ -61,7 +62,7 @@ const InventoryAuditModule: React.FC<InventoryAuditModuleProps> = ({ history, pr
 
         } catch (error: any) {
             console.error("Error AI Audit:", error);
-            const isRateLimit = error.message?.includes('429') || error.status === 429;
+            const isRateLimit = error.message?.includes('429') || error.status === 429 || error.message?.includes('Rate exceeded');
             if (isRateLimit) {
                  setAiAnalysis("## ⚠️ Límite de Cuota Alcanzado\n\nEl servicio gratuito de IA ha llegado a su límite temporal. Por favor, conecta una API Key de pago en el módulo **Asistente IA** o espera unos minutos.");
             } else {

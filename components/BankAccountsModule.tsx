@@ -92,10 +92,10 @@ export const BankAccountsModule: React.FC<BankAccountsModuleProps> = ({ bankAcco
     };
 
     return (
-        <div className="flex h-full gap-6">
+        <div className="flex flex-col lg:flex-row h-full gap-6 overflow-hidden">
             
             {/* Left: Form */}
-            <div className="w-96 bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col shrink-0">
+            <div className="w-full lg:w-96 bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col shrink-0 overflow-y-auto lg:overflow-visible max-h-[400px] lg:max-h-none">
                 <h3 className="font-bold text-lg text-slate-800 dark:text-white mb-6 flex items-center gap-2">
                     <Plus size={20} className="text-emerald-500 dark:text-emerald-400"/> Nueva Cuenta
                 </h3>
@@ -140,7 +140,7 @@ export const BankAccountsModule: React.FC<BankAccountsModuleProps> = ({ bankAcco
                      <div className="flex-1"><h2 className="font-bold text-slate-700 dark:text-white uppercase tracking-tight text-sm">Catálogo de Cuentas Bancarias</h2><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{filteredBanks.length} cuentas registradas</p></div>
                     <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16}/><input type="text" className="pl-9 pr-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm w-64 focus:ring-2 focus:ring-emerald-100 dark:focus:ring-emerald-900/30 outline-none text-slate-800 dark:text-white placeholder-slate-400 transition-colors" placeholder="Buscar banco..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}/></div>
                 </div>
-                <div className="flex-1 overflow-auto p-4 grid grid-cols-1 lg:grid-cols-2 gap-4 content-start">
+                <div className="flex-1 overflow-auto p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 content-start">
                     {filteredBanks.map((b) => (
                         <div key={b.id} className="relative overflow-hidden border border-slate-200 dark:border-slate-700 rounded-[1.5rem] p-5 hover:border-emerald-200 dark:hover:border-emerald-900 transition-colors group bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-900/50 shadow-sm">
                             <div className="absolute right-0 top-0 p-4 opacity-10 dark:opacity-5"><Building2 size={64} className="dark:text-white"/></div>

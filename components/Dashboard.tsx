@@ -16,15 +16,18 @@ interface DashboardProps {
   services: ServiceOrder[];
   products: Product[]; 
   navStructure: any[]; 
+  activeMobileCategory: string | null;
+  onOpenFolder: (catId: string) => void;
+  onCloseFolder: () => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ onNavigate, session, cashMovements = [], services = [], clients = [], products = [], navStructure = [] }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ 
+  onNavigate, session, cashMovements = [], services = [], clients = [], 
+  products = [], navStructure = [], activeMobileCategory, onOpenFolder, onCloseFolder 
+}) => {
   const userName = session?.user.fullName || 'Usuario';
   const businessName = session?.businessName || 'SapiSoft ERP';
   const dailyGoal = 2000.00;
-  
-  // Estado para manejar la navegación por carpetas en móvil
-  const [activeMobileCategory, setActiveMobileCategory] = useState<string | null>(null);
 
   // --- CÁLCULOS DE MÉTRICAS ---
   const stats = useMemo(() => {
@@ -122,7 +125,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate, session, cashM
                               return (
                                   <button 
                                       key={cat.id}
-                                      onClick={() => setActiveMobileCategory(cat.id)}
+                                      onClick={() => onOpenFolder(cat.id)}
                                       className="flex flex-col items-center gap-2 active:scale-95 transition-transform group"
                                   >
                                       {/* Estilo Folder/Carpeta */}
@@ -142,7 +145,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate, session, cashM
                   <div className="animate-in slide-in-from-right-10 duration-300">
                       <div className="flex items-center gap-2 mb-6">
                           <button 
-                            onClick={() => setActiveMobileCategory(null)}
+                            onClick={onCloseFolder}
                             className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-600 dark:text-slate-200 shadow-sm active:scale-90 transition-all"
                           >
                               <ChevronLeft size={24}/>

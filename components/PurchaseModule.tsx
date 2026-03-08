@@ -363,7 +363,7 @@ export const PurchaseModule: React.FC<PurchaseModuleProps> = ({ products, suppli
                     <div className="w-20 animate-in zoom-in-95">
                         <div className="relative">
                             <Zap size={8} className="absolute -top-1 right-1 text-amber-500"/>
-                            <input type="number" step="0.01" className="w-full p-2 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 rounded-xl text-[10px] font-black outline-none" value={exchangeRate} onChange={e => setExchangeRate(e.target.value)} placeholder="T/C" />
+                            <input type="number" step="0.01" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="w-full p-2 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 rounded-xl text-[10px] font-black outline-none" value={exchangeRate} onChange={e => setExchangeRate(e.target.value)} placeholder="T/C" />
                         </div>
                     </div>
                 )}
@@ -372,7 +372,7 @@ export const PurchaseModule: React.FC<PurchaseModuleProps> = ({ products, suppli
             {paymentCondition === 'Credito' && (
                 <div className="animate-in slide-in-from-top-1">
                     <label className="text-[8px] font-bold text-slate-500 uppercase tracking-widest ml-1 mb-1 block">Vencimiento (Días)</label>
-                    <input type="number" className="w-full p-2 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800 rounded-xl text-[10px] font-black outline-none text-blue-600" value={creditDays} onChange={e => setCreditDays(Number(e.target.value))} />
+                    <input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="w-full p-2 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800 rounded-xl text-[10px] font-black outline-none text-blue-600" value={creditDays} onChange={e => setCreditDays(Number(e.target.value))} />
                 </div>
             )}
         </div>
@@ -420,6 +420,40 @@ export const PurchaseModule: React.FC<PurchaseModuleProps> = ({ products, suppli
         </div>
 
         <div className="flex-1 overflow-y-auto p-2 sm:p-0 min-h-0 bg-white dark:bg-slate-800/20">
+           {/* Mobile Cart View */}
+           <div className="md:hidden space-y-2 p-2">
+              {cart.map(item => (
+                <div key={item.id} className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-2xl border border-slate-100 dark:border-slate-700">
+                    <div className="flex justify-between items-start mb-2">
+                        <div className="min-w-0 flex-1">
+                            <div className="font-bold text-slate-800 dark:text-white text-[11px] uppercase truncate pr-2">{item.name}</div>
+                            <div className="text-[8px] font-black text-orange-500 uppercase tracking-tighter mt-0.5">SKU: {item.code}</div>
+                        </div>
+                        <button onClick={() => removeFromCart(item.id)} className="p-1.5 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg">
+                            <Trash2 size={14}/>
+                        </button>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1 bg-white dark:bg-slate-800 p-0.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                            <button onClick={() => updateQuantity(item.id, -1)} className="w-7 h-7 flex items-center justify-center text-slate-400"><Minus size={12}/></button>
+                            <input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="w-8 text-center font-black text-slate-800 dark:text-white text-[11px] bg-transparent outline-none" value={item.quantity} onChange={(e) => handleQtyChange(item.id, e.target.value)}/>
+                            <button onClick={() => updateQuantity(item.id, 1)} className="w-7 h-7 flex items-center justify-center text-slate-400"><Plus size={12}/></button>
+                        </div>
+                        
+                        <div className="text-right">
+                            <div className="text-[10px] font-black text-slate-900 dark:text-white">
+                                {formatSymbol(currency)} {item.total.toFixed(2)}
+                            </div>
+                            <button onClick={() => startEditingCost(item)} className="text-[8px] font-bold text-orange-600 uppercase">
+                                {formatSymbol(currency)} {item.price.toFixed(2)} / u
+                            </button>
+                        </div>
+                    </div>
+                </div>
+              ))}
+           </div>
+
            {cart.length === 0 ? (
              <div className="h-full flex flex-col items-center justify-center text-slate-300 dark:text-slate-600 py-12">
                <ShoppingBag size={64} strokeWidth={1} className="mb-4 opacity-20"/>
@@ -440,6 +474,7 @@ export const PurchaseModule: React.FC<PurchaseModuleProps> = ({ products, suppli
                                   <button onClick={() => updateQuantity(item.id, -1)} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-400 transition-colors"><Minus size={12}/></button>
                                   <input 
                                       type="number"
+                                      onWheel={(e) => (e.target as HTMLInputElement).blur()}
                                       className="w-12 text-center font-black text-slate-800 dark:text-white text-sm bg-transparent outline-none focus:ring-0"
                                       value={item.quantity}
                                       onChange={(e) => handleQtyChange(item.id, e.target.value)}
@@ -450,7 +485,7 @@ export const PurchaseModule: React.FC<PurchaseModuleProps> = ({ products, suppli
                          </td>
                          <td className="py-2 text-right">
                             {editingItemId === item.id ? (
-                                <input type="number" autoFocus className="w-24 p-2 border-2 border-orange-500 rounded-xl text-right font-black text-sm outline-none shadow-inner bg-white dark:bg-slate-900 text-slate-900 dark:text-white" value={tempCost} onChange={e => setTempCost(e.target.value)} onBlur={() => saveCost(item.id)} onKeyDown={e => e.key === 'Enter' && saveCost(item.id)} />
+                                <input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} autoFocus className="w-24 p-2 border-2 border-orange-500 rounded-xl text-right font-black text-sm outline-none shadow-inner bg-white dark:bg-slate-900 text-slate-900 dark:text-white" value={tempCost} onChange={e => setTempCost(e.target.value)} onBlur={() => saveCost(item.id)} onKeyDown={e => e.key === 'Enter' && saveCost(item.id)} />
                             ) : (
                                 <button onClick={() => startEditingCost(item)} className="text-slate-700 dark:text-slate-200 hover:text-orange-600 font-bold group/edit px-1.5 py-0.5 rounded-lg hover:bg-orange-50 transition-all text-sm">
                                     {formatSymbol(currency)} {item.price.toFixed(2)}
@@ -522,7 +557,7 @@ export const PurchaseModule: React.FC<PurchaseModuleProps> = ({ products, suppli
                       <div className="space-y-4">
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">{['Efectivo', 'Yape', 'Transferencia', 'Tarjeta', 'Deposito', 'Saldo Favor'].map(m => (<button key={m} onClick={() => setCurrentPayment({...currentPayment, method: m as any, reference: '', accountId: ''})} className={`py-2.5 px-3 rounded-xl border-2 font-bold text-[10px] uppercase transition-all ${currentPayment.method === m ? 'bg-orange-600 border-orange-600 text-white shadow-lg scale-105' : 'bg-white dark:bg-slate-700 text-slate-500 border-slate-200 dark:border-slate-600 hover:border-orange-400'}`}>{m === 'Saldo Favor' ? 'Billetera' : m}</button>))}</div>
                           {currentPayment.method !== 'Efectivo' && currentPayment.method !== 'Saldo Favor' && (<div className="space-y-3 animate-in slide-in-from-top-1 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner"><div><label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Cuenta Origen ({formatSymbol(currency)})</label><select className="w-full p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold outline-none shadow-sm" value={currentPayment.accountId} onChange={e => setCurrentPayment({...currentPayment, accountId: e.target.value})}><option value="">-- SELECCIONAR --</option>{availableBankAccounts.map(b => <option key={b.id} value={b.id}>{b.alias || b.bankName} - {b.accountNumber}</option>)}</select></div><div><label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Operación / Ref</label><input type="text" className="w-full p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold outline-none uppercase shadow-sm" value={currentPayment.reference} onChange={e => setCurrentPayment({...currentPayment, reference: e.target.value})} placeholder="123456" /></div></div>)}
-                          <div className="space-y-1"><label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">MONTO</label><div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-black text-slate-300 italic">{formatSymbol(currency)}</span><input ref={paymentAmountRef} type="number" className="w-full pl-12 p-4 bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-2xl text-4xl font-black text-slate-800 dark:text-white outline-none focus:border-orange-500 shadow-inner" value={currentPayment.amount} onChange={e => setCurrentPayment({...currentPayment, amount: e.target.value})} /></div></div>
+                          <div className="space-y-1"><label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">MONTO</label><div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-black text-slate-300 italic">{formatSymbol(currency)}</span><input ref={paymentAmountRef} type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="w-full pl-12 p-4 bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-2xl text-4xl font-black text-slate-800 dark:text-white outline-none focus:border-orange-500 shadow-inner" value={currentPayment.amount} onChange={e => setCurrentPayment({...currentPayment, amount: e.target.value})} /></div></div>
                           <button onClick={handleAddPayment} className="w-full py-4 bg-slate-800 dark:bg-white text-white dark:text-slate-900 font-black rounded-2xl flex items-center justify-center gap-2 shadow-xl active:scale-95 transition-all uppercase text-[11px] tracking-widest"><Plus size={18}/> Agregar Egreso</button>
                       </div>
                   </div>

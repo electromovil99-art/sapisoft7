@@ -147,29 +147,29 @@ const SystemDiagnosticsModule: React.FC<SystemDiagnosticsProps> = ({
         <div className="flex flex-col h-full gap-6 animate-in fade-in duration-500">
             
             {/* CABECERA DE DIAGNÓSTICO */}
-            <div className="bg-slate-900 text-white p-8 rounded-[3rem] shadow-2xl relative overflow-hidden shrink-0 border border-slate-700">
-                <div className="absolute top-0 right-0 w-96 h-96 bg-primary-600/20 rounded-full blur-[100px] -mr-20 -mt-20"></div>
+            <div className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white p-8 rounded-[3rem] shadow-sm dark:shadow-2xl relative overflow-hidden shrink-0 border border-slate-100 dark:border-slate-700">
+                <div className="absolute top-0 right-0 w-96 h-96 bg-primary-600/10 dark:bg-primary-600/20 rounded-full blur-[100px] -mr-20 -mt-20"></div>
                 <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
                     <div className="flex items-center gap-6">
-                        <div className="p-5 bg-white/10 backdrop-blur-xl rounded-[2rem] border border-white/20 shadow-inner">
-                            <Bug size={32} className="text-primary-400"/>
+                        <div className="p-5 bg-slate-50 dark:bg-white/10 backdrop-blur-xl rounded-[2rem] border border-slate-100 dark:border-white/20 shadow-inner">
+                            <Bug size={32} className="text-primary-600 dark:text-primary-400"/>
                         </div>
                         <div>
                             <h2 className="text-3xl font-black tracking-tighter uppercase leading-none">Debug Center</h2>
-                            <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.2em] mt-2">Pruebas de Estrés y Diagnóstico de Estado</p>
+                            <p className="text-slate-400 dark:text-slate-500 font-bold text-[10px] uppercase tracking-[0.2em] mt-2">Pruebas de Estrés y Diagnóstico de Estado</p>
                         </div>
                     </div>
                     <div className="flex gap-3">
                         <button 
                             onClick={() => { setTestLogs([]); }}
-                            className="px-6 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all"
+                            className="px-6 py-4 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all text-slate-600 dark:text-white"
                         >
                             Limpiar Logs
                         </button>
                         <button 
                             onClick={runTraceabilityTest}
                             disabled={isTesting}
-                            className="px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2 shadow-xl shadow-indigo-900/50 transition-all active:scale-95"
+                            className="px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2 shadow-xl shadow-indigo-900/20 dark:shadow-indigo-900/50 transition-all active:scale-95"
                         >
                             {isTesting ? <RefreshCw className="animate-spin" size={14}/> : <Zap size={14}/>}
                             Ejecutar Test Cronológico

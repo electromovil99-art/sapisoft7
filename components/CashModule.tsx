@@ -74,6 +74,7 @@ const DenominationRow: React.FC<{
             <input 
                 ref={inputRef}
                 type="number" 
+                onWheel={(e) => (e.target as HTMLInputElement).blur()}
                 className="w-12 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded py-0.5 px-1 text-center font-black text-xs text-slate-800 dark:text-white outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-100 transition-all shadow-sm placeholder-slate-300"
                 value={count}
                 onChange={(e) => onChange(e.target.value)}
@@ -186,7 +187,7 @@ const CashBoxManager: React.FC<{
     };
 
     return (
-        <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-2xl w-full max-w-[540px] overflow-hidden border border-slate-200 dark:border-slate-700 animate-in zoom-in-95 relative mx-auto my-2 flex flex-col max-h-[90vh]">
+        <div className="bg-white dark:bg-slate-800 rounded-t-[2.5rem] sm:rounded-[2.5rem] shadow-2xl w-full max-w-[540px] overflow-hidden border border-slate-200 dark:border-slate-700 animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-300 relative mx-auto flex flex-col h-[95vh] sm:h-auto sm:max-h-[90vh]">
             
             {showPrintPreview && (
                 <div className="absolute inset-0 z-[150] bg-slate-900/90 backdrop-blur-md flex items-center justify-center p-4">
@@ -285,10 +286,10 @@ const CashBoxManager: React.FC<{
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 bg-white dark:bg-slate-900">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 h-full">
-                    <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-2xl border border-slate-100 dark:border-slate-700">
-                        <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 pl-1 flex items-center gap-1.5"><Banknote size={12}/> Billetes y Monedas</h4>
-                        <div className="flex-1 space-y-0 overflow-y-auto pr-1 custom-scrollbar">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
+                    <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-900/50 p-3 rounded-2xl border border-slate-100 dark:border-slate-700">
+                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 pl-1 flex items-center gap-1.5"><Banknote size={14}/> Billetes y Monedas</h4>
+                        <div className="flex-1 space-y-1 overflow-y-auto pr-1 custom-scrollbar">
                             {denominations.map((d, idx) => (
                                 <DenominationRow 
                                     key={d.label} label={d.label} value={d.val} count={counts[d.val.toString()] || ''} 
@@ -339,6 +340,7 @@ const CashBoxManager: React.FC<{
                                                 <input 
                                                     ref={(el) => { bankInputRefs.current[idx] = el; }}
                                                     type="number" 
+                                                    onWheel={(e) => (e.target as HTMLInputElement).blur()}
                                                     className="w-16 pl-5 pr-1 py-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-xs font-black outline-none focus:border-blue-500 text-right tabular-nums transition-all"
                                                     value={manualBankBalances[acc.id] || ''}
                                                     onChange={e => setManualBankBalances({...manualBankBalances, [acc.id]: e.target.value})}
@@ -642,7 +644,35 @@ export const CashModule: React.FC<CashModuleProps> = ({
             </div>
             
             <div className="flex-1 overflow-auto">
-                <div className="min-w-[800px] md:min-w-full">
+                {/* Mobile Movements View */}
+                <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+                    {displayedMovements.map(m => (
+                        <div key={m.id} className="p-4 bg-white dark:bg-slate-900 flex flex-col gap-2">
+                            <div className="flex justify-between items-start">
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{m.sequentialId} • {m.time}</span>
+                                    <span className="text-xs font-black text-slate-800 dark:text-white uppercase leading-tight mt-1">{m.concept}</span>
+                                </div>
+                                <div className={`text-right font-black text-sm ${m.type === 'Ingreso' ? 'text-emerald-600' : 'text-red-500'}`}>
+                                    {m.type === 'Ingreso' ? '+' : '-'} {m.amount.toFixed(2)}
+                                </div>
+                            </div>
+                            <div className="flex justify-between items-center mt-1">
+                                <div className="flex gap-2 items-center">
+                                    <span className="text-[9px] font-bold bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-500 uppercase">{m.paymentMethod}</span>
+                                    {m.referenceId && <span className="text-[9px] font-mono text-primary-600 uppercase">{m.referenceId}</span>}
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <span className="text-[10px] font-mono font-black text-slate-400">S/ {m.accumulatedBalance?.toFixed(2)}</span>
+                                    <button onClick={() => setSelectedMovement(m)} className="p-1.5 text-slate-300 hover:text-primary-600 transition-all"><Eye size={18}/></button>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Desktop Table View */}
+                <div className="hidden md:block min-w-full">
                     <table className="w-full text-xs text-left">
                         <thead className="bg-slate-50 text-slate-400 font-black uppercase border-b sticky top-0 z-10">
                             <tr>
@@ -683,8 +713,8 @@ export const CashModule: React.FC<CashModuleProps> = ({
 
         {/* MODAL INGRESO / GASTO */}
       {(isIncomeModalOpen || isExpenseModalOpen) && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[2000] flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-slate-800 w-full max-w-md rounded-[2.5rem] shadow-2xl border border-white/20 animate-in zoom-in-95 overflow-hidden flex flex-col">
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[2000] flex items-end sm:items-center justify-center p-0 sm:p-4">
+            <div className="bg-white dark:bg-slate-800 w-full max-w-md rounded-t-[2.5rem] sm:rounded-[2.5rem] shadow-2xl border border-white/20 animate-in slide-in-from-bottom-10 sm:zoom-in-95 overflow-hidden flex flex-col max-h-[95vh]">
                  <div className={`p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center ${isIncomeModalOpen ? 'bg-emerald-50 dark:bg-emerald-900/20' : 'bg-orange-50 dark:bg-orange-900/20'}`}>
                     <h3 className={`font-black text-sm uppercase tracking-widest flex items-center gap-2 ${isIncomeModalOpen ? 'text-emerald-700 dark:text-emerald-400' : 'text-orange-700 dark:text-orange-400'}`}>
                         {isIncomeModalOpen ? <Plus size={18}/> : <Minus size={18}/>}
@@ -695,7 +725,7 @@ export const CashModule: React.FC<CashModuleProps> = ({
                  <div className="p-8 space-y-4">
                      <div className="space-y-1.5">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Monto ({systemBaseCurrency})</label>
-                        <input type="number" autoFocus className="w-full p-4 text-2xl font-black text-center bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-700 rounded-2xl outline-none focus:border-blue-500" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" />
+                        <input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} autoFocus className="w-full p-4 text-2xl font-black text-center bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-700 rounded-2xl outline-none focus:border-blue-500" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" />
                      </div>
                      
                      <div className="space-y-1.5">
@@ -766,8 +796,8 @@ export const CashModule: React.FC<CashModuleProps> = ({
 
       {/* MODAL TRANSFERENCIA RÁPIDA */}
       {isTransferModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[2000] flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-slate-800 w-full max-w-md rounded-[2.5rem] shadow-2xl border border-white/20 animate-in zoom-in-95 overflow-hidden flex flex-col">
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[2000] flex items-end sm:items-center justify-center p-0 sm:p-4">
+            <div className="bg-white dark:bg-slate-800 w-full max-w-md rounded-t-[2.5rem] sm:rounded-[2.5rem] shadow-2xl border border-white/20 animate-in slide-in-from-bottom-10 sm:zoom-in-95 overflow-hidden flex flex-col max-h-[95vh]">
                  <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-blue-50 dark:bg-blue-900/20 flex justify-between items-center">
                     <h3 className="font-black text-sm uppercase tracking-widest text-blue-700 dark:text-blue-400 flex items-center gap-2">
                         <ArrowRightLeft size={18}/> Transferencia Rápida
@@ -796,7 +826,7 @@ export const CashModule: React.FC<CashModuleProps> = ({
 
                      <div className="space-y-1.5">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Monto a Transferir</label>
-                        <input type="number" className="w-full p-4 text-2xl font-black text-center bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-700 rounded-2xl outline-none focus:border-blue-500" value={transferData.amount} onChange={e => setTransferData({...transferData, amount: e.target.value})} placeholder="0.00" />
+                        <input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="w-full p-4 text-2xl font-black text-center bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-700 rounded-2xl outline-none focus:border-blue-500" value={transferData.amount} onChange={e => setTransferData({...transferData, amount: e.target.value})} placeholder="0.00" />
                      </div>
 
                      <div className="space-y-1.5">
@@ -970,19 +1000,17 @@ export const CashModule: React.FC<CashModuleProps> = ({
 
         {/* MODAL CIERRE */}
         {isCloseModalOpen && (
-            <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[2000] flex items-center justify-center p-4">
-                <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-2xl overflow-hidden w-[500px]">
-                    <CashBoxManager 
-                        type="CLOSE" 
-                        expectedCash={currentCashActual} 
-                        bankBalances={bankBalancesInfo}
-                        onConfirm={(total, notes, confirmed) => {
-                            onCloseCashBox(total, currentCashActual, 0, notes, confirmed);
-                            setIsCloseModalOpen(false);
-                        }}
-                        onCancel={() => setIsCloseModalOpen(false)}
-                    />
-                </div>
+            <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[2000] flex items-end sm:items-center justify-center p-0 sm:p-4">
+                <CashBoxManager 
+                    type="CLOSE" 
+                    expectedCash={currentCashActual} 
+                    bankBalances={bankBalancesInfo}
+                    onConfirm={(total, notes, confirmed) => {
+                        onCloseCashBox(total, currentCashActual, 0, notes, confirmed);
+                        setIsCloseModalOpen(false);
+                    }}
+                    onCancel={() => setIsCloseModalOpen(false)}
+                />
             </div>
         )}
     </div>

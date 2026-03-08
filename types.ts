@@ -183,7 +183,10 @@ export interface PaymentBreakdown {
 }
 
 export interface SaleRecord {
-    id: string;
+    id: string; // Internal ID (UUID or legacy)
+    globalId?: string; // Global Unique Transaction ID (UUID)
+    correlativeId?: string; // Human readable ID (e.g. B001-000023)
+    tenantId?: string; // For SaaS Traceability
     branchId: string;
     date: string;
     time: string;
@@ -200,6 +203,9 @@ export interface SaleRecord {
 
 export interface PurchaseRecord {
     id: string;
+    globalId?: string;
+    correlativeId?: string;
+    tenantId?: string;
     branchId: string;
     date: string;
     time: string;
@@ -216,6 +222,8 @@ export interface PurchaseRecord {
 
 export interface StockMovement {
     id: string;
+    globalId?: string;
+    tenantId?: string;
     branchId: string;
     date: string;
     time: string;
@@ -231,6 +239,8 @@ export interface StockMovement {
 
 export interface CashMovement {
     id: string;
+    globalId?: string;
+    tenantId?: string;
     branchId?: string;
     date: string;
     time: string;
@@ -258,6 +268,9 @@ export interface ServiceProductItem {
 
 export interface ServiceOrder {
     id: string;
+    globalId?: string;
+    correlativeId?: string;
+    tenantId?: string;
     branchId?: string;
     entryDate: string;
     entryTime: string;
@@ -327,6 +340,10 @@ export interface GeoLocation {
 
 export interface Quotation {
     id: string;
+    globalId?: string;
+    correlativeId?: string;
+    tenantId?: string;
+    branchId?: string;
     date: string;
     time: string;
     clientName: string;
@@ -336,6 +353,10 @@ export interface Quotation {
 
 export interface Presale {
     id: string;
+    globalId?: string;
+    correlativeId?: string;
+    tenantId?: string;
+    branchId?: string;
     date: string;
     time: string;
     deliveryDate: string;

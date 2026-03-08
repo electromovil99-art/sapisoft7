@@ -625,11 +625,11 @@ export const InventoryModule: React.FC<InventoryProps> = ({
                             <div className="grid grid-cols-2 gap-4 md:gap-6">
                                 <div className="space-y-1.5">
                                     <label className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase block text-center">Stock Actual</label>
-                                    <input type="number" className="w-full p-3 md:p-4 bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-2xl md:rounded-3xl text-2xl md:text-3xl font-black text-center outline-none focus:border-emerald-500 shadow-inner text-slate-800 dark:text-white" value={newProduct.stock} onChange={e => setNewProduct({...newProduct, stock: Number(e.target.value)})} placeholder="0"/>
+                                    <input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="w-full p-3 md:p-4 bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-2xl md:rounded-3xl text-2xl md:text-3xl font-black text-center outline-none focus:border-emerald-500 shadow-inner text-slate-800 dark:text-white" value={newProduct.stock} onChange={e => setNewProduct({...newProduct, stock: Number(e.target.value)})} placeholder="0"/>
                                 </div>
                                 <div className="space-y-1.5">
                                     <label className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase block text-center">Costo Compra S/</label>
-                                    <input type="number" className="w-full p-3 md:p-4 bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-2xl md:rounded-3xl text-2xl md:text-3xl font-black text-center outline-none focus:border-emerald-500 shadow-inner text-slate-800 dark:text-white" value={newProduct.cost} onChange={e => setNewProduct({...newProduct, cost: Number(e.target.value)})} placeholder="0.00"/>
+                                    <input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="w-full p-3 md:p-4 bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-2xl md:rounded-3xl text-2xl md:text-3xl font-black text-center outline-none focus:border-emerald-500 shadow-inner text-slate-800 dark:text-white" value={newProduct.cost} onChange={e => setNewProduct({...newProduct, cost: Number(e.target.value)})} placeholder="0.00"/>
                                 </div>
                             </div>
 
@@ -670,11 +670,11 @@ export const InventoryModule: React.FC<InventoryProps> = ({
                                     <div className="grid grid-cols-2 gap-4 animate-in slide-in-from-top-2">
                                         <div className="space-y-1">
                                             <label className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase block text-center">Mínimo</label>
-                                            <input type="number" className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl text-lg font-black text-center outline-none focus:border-primary-500 text-slate-800 dark:text-white" value={newProduct.minStock} onChange={e => setNewProduct({...newProduct, minStock: Number(e.target.value)})} placeholder="0"/>
+                                            <input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl text-lg font-black text-center outline-none focus:border-primary-500 text-slate-800 dark:text-white" value={newProduct.minStock} onChange={e => setNewProduct({...newProduct, minStock: Number(e.target.value)})} placeholder="0"/>
                                         </div>
                                         <div className="space-y-1">
                                             <label className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase block text-center">Máximo</label>
-                                            <input type="number" className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl text-lg font-black text-center outline-none focus:border-primary-500 text-slate-800 dark:text-white" value={newProduct.maxStock} onChange={e => setNewProduct({...newProduct, maxStock: Number(e.target.value)})} placeholder="0"/>
+                                            <input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl text-lg font-black text-center outline-none focus:border-primary-500 text-slate-800 dark:text-white" value={newProduct.maxStock} onChange={e => setNewProduct({...newProduct, maxStock: Number(e.target.value)})} placeholder="0"/>
                                         </div>
                                     </div>
                                 )}
@@ -692,7 +692,7 @@ export const InventoryModule: React.FC<InventoryProps> = ({
                                 <label className="text-[10px] font-black text-primary-500 uppercase block text-center tracking-[0.1em]">Precio Público S/</label>
                                 <div className="relative">
                                     <div className="absolute left-4 md:left-6 top-1/2 -translate-y-1/2 text-xl md:text-2xl font-black text-primary-300">S/</div>
-                                    <input type="number" className="w-full pl-12 md:pl-16 p-4 md:p-5 bg-primary-50 dark:bg-primary-900/10 border-2 border-primary-200 dark:border-primary-800 rounded-[2rem] md:rounded-[2.5rem] text-4xl md:text-5xl font-black text-center text-primary-600 outline-none focus:border-primary-500 shadow-xl shadow-primary-500/5 transition-all" value={newProduct.price} onChange={e => setNewProduct({...newProduct, price: Number(e.target.value)})} placeholder="0.00"/>
+                                    <input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="w-full pl-12 md:pl-16 p-4 md:p-5 bg-primary-50 dark:bg-primary-900/10 border-2 border-primary-200 dark:border-primary-800 rounded-[2rem] md:rounded-[2.5rem] text-4xl md:text-5xl font-black text-center text-primary-600 outline-none focus:border-primary-500 shadow-xl shadow-primary-500/5 transition-all" value={newProduct.price} onChange={e => setNewProduct({...newProduct, price: Number(e.target.value)})} placeholder="0.00"/>
                                 </div>
                             </div>
 
@@ -705,11 +705,11 @@ export const InventoryModule: React.FC<InventoryProps> = ({
                                         <div key={i} className="flex gap-2 items-center bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-2xl border border-slate-200 dark:border-slate-700 group hover:border-orange-200 transition-all">
                                             <div className="flex-1">
                                                 <label className="text-[8px] font-black text-slate-400 uppercase block mb-1 ml-1 text-center">Precio Unit. S/</label>
-                                                <input type="number" className="w-full p-2 bg-white dark:bg-slate-900 border rounded-xl text-center font-black text-sm outline-none focus:border-orange-500 text-slate-800 dark:text-white" value={newProduct.priceTiers?.[i]?.price || ""} onChange={e => updateTier(i, 'price', Number(e.target.value))} placeholder="0.00"/>
+                                                <input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="w-full p-2 bg-white dark:bg-slate-900 border rounded-xl text-center font-black text-sm outline-none focus:border-orange-500 text-slate-800 dark:text-white" value={newProduct.priceTiers?.[i]?.price || ""} onChange={e => updateTier(i, 'price', Number(e.target.value))} placeholder="0.00"/>
                                             </div>
                                             <div className="flex-1">
                                                 <label className="text-[8px] font-black text-slate-400 uppercase block mb-1 ml-1 text-center">Desde (Cant.)</label>
-                                                <input type="number" className="w-full p-2 bg-white dark:bg-slate-900 border rounded-xl text-center font-black text-sm outline-none focus:border-orange-500 text-slate-800 dark:text-white" value={newProduct.priceTiers?.[i]?.minQuantity || ""} onChange={e => updateTier(i, 'minQuantity', Number(e.target.value))} placeholder="Cant"/>
+                                                <input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="w-full p-2 bg-white dark:bg-slate-900 border rounded-xl text-center font-black text-sm outline-none focus:border-orange-500 text-slate-800 dark:text-white" value={newProduct.priceTiers?.[i]?.minQuantity || ""} onChange={e => updateTier(i, 'minQuantity', Number(e.target.value))} placeholder="Cant"/>
                                             </div>
                                         </div>
                                     ))}

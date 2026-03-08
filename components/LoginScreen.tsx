@@ -441,40 +441,40 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onResetPasswo
             {showLoginModal && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-300" onClick={() => setShowLoginModal(false)}></div>
-                    <div className="relative w-full max-w-md bg-white dark:bg-slate-900 border border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-                        <button onClick={() => setShowLoginModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-red-500 z-10 transition-colors"><X size={24}/></button>
-                        <div className="p-8 md:p-10">
-                            <div className="flex flex-col items-center mb-10">
-                                <div className="w-14 h-14 bg-primary rounded-2xl flex items-center justify-center shadow-2xl mb-4"><span className="text-white font-black text-2xl">S</span></div>
-                                <h2 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">Acceso al Sistema</h2>
-                                <p className="text-slate-400 font-bold text-[9px] uppercase tracking-widest mt-1">Gestión Empresarial Inteligente</p>
+                    <div className="relative w-full max-w-sm bg-white dark:bg-slate-900 border border-white/10 rounded-[2rem] shadow-2xl overflow-y-auto max-h-[90vh] animate-in zoom-in-95 duration-300">
+                        <button onClick={() => setShowLoginModal(false)} className="absolute top-4 right-4 text-slate-400 hover:text-red-500 z-10 transition-colors"><X size={20}/></button>
+                        <div className="p-6 sm:p-8">
+                            <div className="flex flex-col items-center mb-6">
+                                <div className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center shadow-xl mb-3"><span className="text-white font-black text-xl">S</span></div>
+                                <h2 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tighter text-center">Acceso al Sistema</h2>
+                                <p className="text-slate-400 font-bold text-[8px] uppercase tracking-widest mt-1 text-center">Gestión Empresarial Inteligente</p>
                             </div>
                             {!isRecovery ? (
-                                <form onSubmit={handleSubmit} className="space-y-6">
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Usuario / Email</label>
+                                <form onSubmit={handleSubmit} className="space-y-4">
+                                    <div className="space-y-1">
+                                        <label className="text-[8px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Usuario / Email</label>
                                         <div className="relative group">
-                                            <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-primary transition-colors" />
-                                            <input type="text" className="block w-full pl-12 pr-4 py-4 bg-slate-50 dark:bg-slate-950 border-2 border-slate-100 dark:border-slate-800 rounded-2xl text-slate-900 dark:text-white font-bold focus:border-primary outline-none transition-all" placeholder="ADMIN" value={username} onChange={(e) => setUsername(e.target.value)} />
+                                            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-primary transition-colors" />
+                                            <input type="text" className="block w-full pl-10 pr-3 py-3 bg-slate-50 dark:bg-slate-950 border-2 border-slate-100 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white text-sm font-bold focus:border-primary outline-none transition-all" placeholder="ADMIN" value={username} onChange={(e) => setUsername(e.target.value)} />
                                         </div>
                                     </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Contraseña</label>
+                                    <div className="space-y-1">
+                                        <label className="text-[8px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Contraseña</label>
                                         <div className="relative group">
-                                            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-primary transition-colors" />
-                                            <input type="password" className="block w-full pl-12 pr-4 py-4 bg-slate-50 dark:bg-slate-950 border-2 border-slate-100 dark:border-slate-800 rounded-2xl text-slate-900 dark:text-white font-bold focus:border-primary outline-none transition-all" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
+                                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-primary transition-colors" />
+                                            <input type="password" className="block w-full pl-10 pr-3 py-3 bg-slate-50 dark:bg-slate-950 border-2 border-slate-100 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white text-sm font-bold focus:border-primary outline-none transition-all" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
                                         </div>
                                     </div>
-                                    {error && (<div className="p-4 bg-red-50 border border-red-100 rounded-xl flex items-center gap-3 text-red-600 text-[10px] font-black uppercase tracking-tight"><AlertOctagon size={18} /> {error}</div>)}
-                                    <button type="submit" disabled={loading} className="w-full py-5 bg-primary text-white font-black rounded-2xl shadow-2xl transition-all flex items-center justify-center gap-3 disabled:opacity-50 uppercase tracking-widest text-[11px] active:scale-95 hover:bg-primary-600">
-                                        {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <>Ingresar ahora <ArrowRight size={18} /></>}
+                                    {error && (<div className="p-3 bg-red-50 border border-red-100 rounded-lg flex items-center gap-2 text-red-600 text-[9px] font-black uppercase tracking-tight"><AlertOctagon size={14} /> {error}</div>)}
+                                    <button type="submit" disabled={loading} className="w-full py-3.5 mt-2 bg-primary text-white font-black rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 uppercase tracking-widest text-[10px] active:scale-95 hover:bg-primary-600">
+                                        {loading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <>Ingresar ahora <ArrowRight size={16} /></>}
                                     </button>
                                 </form>
                             ) : (
-                                <div className="text-center space-y-6 animate-in fade-in">
-                                    <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">Recuperar Acceso</h3>
-                                    <form className="space-y-4"><input type="text" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-800 font-bold outline-none focus:border-primary" placeholder="Usuario o correo..."/><button type="button" className="w-full py-4 bg-primary text-white font-black rounded-2xl uppercase tracking-widest text-xs">Enviar código</button></form>
-                                    <button onClick={() => setIsRecovery(false)} className="text-[10px] font-black text-slate-400 hover:text-slate-600 uppercase tracking-widest flex items-center justify-center gap-2 w-full"><ArrowLeft size={14}/> Volver</button>
+                                <div className="text-center space-y-5 animate-in fade-in">
+                                    <h3 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tighter">Recuperar Acceso</h3>
+                                    <form className="space-y-3"><input type="text" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm font-bold outline-none focus:border-primary" placeholder="Usuario o correo..."/><button type="button" className="w-full py-3 bg-primary text-white font-black rounded-xl uppercase tracking-widest text-[10px]">Enviar código</button></form>
+                                    <button onClick={() => setIsRecovery(false)} className="text-[9px] font-black text-slate-400 hover:text-slate-600 uppercase tracking-widest flex items-center justify-center gap-1.5 w-full"><ArrowLeft size={12}/> Volver</button>
                                 </div>
                             )}
                         </div>
@@ -486,25 +486,25 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onResetPasswo
             {showCheckoutModal && (
                 <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-slate-950/95 backdrop-blur-xl animate-in fade-in" onClick={() => setShowCheckoutModal(false)}></div>
-                    <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-[3rem] shadow-2xl overflow-hidden animate-in zoom-in-95 border border-white/10 flex flex-col">
-                        <div className="p-10 text-center">
-                            <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <ShieldCheck size={40} className="text-primary" />
+                    <div className="relative w-full max-w-sm bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl overflow-y-auto max-h-[90vh] animate-in zoom-in-95 border border-white/10 flex flex-col">
+                        <div className="p-8 text-center">
+                            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-5">
+                                <ShieldCheck size={32} className="text-primary" />
                             </div>
-                            <h3 className="text-2xl font-black uppercase tracking-tighter dark:text-white">Plan {selectedPlan}</h3>
-                            <p className="text-slate-400 font-bold text-[10px] uppercase mt-2 mb-8 tracking-widest">Suscripción Segura vía Helio</p>
+                            <h3 className="text-xl font-black uppercase tracking-tighter dark:text-white">Plan {selectedPlan}</h3>
+                            <p className="text-slate-400 font-bold text-[9px] uppercase mt-1 mb-6 tracking-widest">Suscripción Segura vía Helio</p>
                             
                             <button 
                                 onClick={handleHelioPayment}
-                                className="w-full py-5 bg-primary text-white font-black rounded-2xl shadow-xl hover:scale-105 transition-all uppercase tracking-widest text-[11px]"
+                                className="w-full py-4 bg-primary text-white font-black rounded-xl shadow-lg hover:scale-105 transition-all uppercase tracking-widest text-[10px]"
                             >
                                 ACTIVAR AHORA CON HELIO
                             </button>
 
-                            <button onClick={() => setShowCheckoutModal(false)} className="mt-6 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-primary transition-colors">Cancelar</button>
+                            <button onClick={() => setShowCheckoutModal(false)} className="mt-5 text-[9px] font-black text-slate-400 uppercase tracking-widest hover:text-primary transition-colors">Cancelar</button>
                         </div>
-                        <div className="p-6 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 text-center shrink-0">
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">merchant of record secured by web3 rails</p>
+                        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 text-center shrink-0">
+                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">merchant of record secured by web3 rails</p>
                         </div>
                     </div>
                 </div>

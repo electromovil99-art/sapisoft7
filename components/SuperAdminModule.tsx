@@ -12,7 +12,8 @@ import {
 } from 'lucide-react';
 import { 
     Tenant, SystemUser, IndustryType, PlanType, TenantInvoice, 
-    MasterAccount, MasterMovement, PaymentMethodType, VideoTutorial
+    MasterAccount, MasterMovement, PaymentMethodType, VideoTutorial,
+    SaleRecord, PurchaseRecord, CashMovement, ServiceOrder, Quotation, Presale
 } from '../types';
 
 interface SuperAdminModuleProps {
@@ -26,9 +27,16 @@ interface SuperAdminModuleProps {
     onAddVideo?: (video: VideoTutorial) => void;
     onUpdateVideo?: (video: VideoTutorial) => void;
     onDeleteVideo?: (id: string) => void;
+    // Traceability Props
+    sales?: SaleRecord[];
+    purchases?: PurchaseRecord[];
+    cashMovements?: CashMovement[];
+    services?: ServiceOrder[];
+    quotations?: Quotation[];
+    presales?: Presale[];
 }
 
-type MainTab = 'BUSINESSES' | 'COLLECTIONS' | 'HISTORY' | 'ANALYTICS' | 'BROADCAST' | 'VIDEOS';
+type MainTab = 'BUSINESSES' | 'COLLECTIONS' | 'HISTORY' | 'ANALYTICS' | 'BROADCAST' | 'VIDEOS' | 'TRACEABILITY';
 
 const PLAN_PRICES: Record<PlanType, number> = {
     'BASICO': 39,
@@ -62,11 +70,36 @@ export const SuperAdminModule: React.FC<SuperAdminModuleProps> = ({
     videoTutorials = [],
     onAddVideo,
     onUpdateVideo,
-    onDeleteVideo
+    onDeleteVideo,
+    sales = [],
+    purchases = [],
+    cashMovements = [],
+    services = [],
+    quotations = [],
+    presales = []
 }) => {
     const [activeMainTab, setActiveMainTab] = useState<MainTab>('BUSINESSES');
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
+    
+    // --- TRACEABILITY LOGIC ---
+    const traceabilityList = useMemo(() => {
+        const allItems = [
+            ...sales.map(s => ({ ...s, type: 'VENTA', ref: s.correlativeId || s.id, amount: s.total, tenant: s.tenantId || 'SapiSoft Demo' })),
+            ...purchases.map(p => ({ ...p, type: 'COMPRA', ref: p.correlativeId || p.id, amount: p.total, tenant: p.tenantId || 'SapiSoft Demo' })),
+            ...cashMovements.map(m => ({ ...m, type: m.type === 'Ingreso' ? 'INGRESO' : 'EGRESO', ref: m.concept, amount: m.amount, tenant: m.tenantId || 'SapiSoft Demo' })),
+            ...services.map(s => ({ ...s, type: 'SERVICIO', ref: s.correlativeId || s.id, amount: s.cost, tenant: s.tenantId || 'SapiSoft Demo' })),
+            ...quotations.map(q => ({ ...q, type: 'COTIZACION', ref: q.id, amount: q.total, tenant: 'SapiSoft Demo' })), // Quotations might not have tenantId yet
+            ...presales.map(p => ({ ...p, type: 'PREVENTA', ref: p.id, amount: p.total, tenant: 'SapiSoft Demo' }))
+        ].filter(item => item.globalId); // Only show items with Global ID
+
+        return allItems.sort((a, b) => {
+            // Sort by Global ID descending
+            const idA = parseInt(a.globalId?.replace(/\D/g, '') || '0');
+            const idB = parseInt(b.globalId?.replace(/\D/g, '') || '0');
+            return idB - idA;
+        });
+    }, [sales, purchases, cashMovements, services, quotations, presales]);
     
     // --- ESTADOS DE GESTIÓN ---
     const [selectedInvoiceForManual, setSelectedInvoiceForManual] = useState<TenantInvoice | null>(null);
@@ -311,6 +344,9 @@ export const SuperAdminModule: React.FC<SuperAdminModuleProps> = ({
                     <button onClick={() => setActiveMainTab('VIDEOS')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-2 whitespace-nowrap ${activeMainTab === 'VIDEOS' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}>
                         <Youtube size={14}/> Tutoriales
                     </button>
+                    <button onClick={() => setActiveMainTab('TRACEABILITY')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-2 whitespace-nowrap ${activeMainTab === 'TRACEABILITY' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}>
+                        <ActivityIcon size={14}/> Trazabilidad
+                    </button>
                 </div>
             </div>
 
@@ -430,6 +466,73 @@ export const SuperAdminModule: React.FC<SuperAdminModuleProps> = ({
                                 );
                             })}
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* VISTA TRAZABILIDAD */}
+            {activeMainTab === 'TRACEABILITY' && (
+                <div className="flex-1 bg-white dark:bg-slate-900 rounded-[2.5rem] border overflow-hidden flex flex-col shadow-sm animate-in fade-in">
+                    <div className="p-6 border-b flex justify-between items-center bg-slate-50/30 px-8">
+                        <h3 className="font-black text-xs uppercase tracking-widest flex items-center gap-2"><ActivityIcon size={16} className="text-indigo-500"/> Auditoría de Trazabilidad Global</h3>
+                        <div className="flex items-center gap-4">
+                            <div className="bg-indigo-50 text-indigo-600 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border border-indigo-100">
+                                {traceabilityList.length} Transacciones Registradas
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex-1 overflow-auto">
+                        <table className="w-full text-left text-[10px]">
+                            <thead className="bg-slate-50 dark:bg-slate-800 text-slate-400 font-black uppercase tracking-widest border-b sticky top-0 z-10">
+                                <tr>
+                                    <th className="px-6 py-3">ID Global (SaaS)</th>
+                                    <th className="px-6 py-3">Fecha / Hora</th>
+                                    <th className="px-6 py-3">Tipo Operación</th>
+                                    <th className="px-6 py-3">Empresa (Tenant)</th>
+                                    <th className="px-6 py-3">Referencia / Correlativo</th>
+                                    <th className="px-6 py-3 text-right">Monto</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                {traceabilityList.map((item: any) => (
+                                    <tr key={item.globalId} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+                                        <td className="px-6 py-3 font-mono font-bold text-indigo-600">
+                                            {item.globalId}
+                                        </td>
+                                        <td className="px-6 py-3 font-bold text-slate-600 dark:text-slate-300">
+                                            {item.date} <span className="text-slate-400 font-normal ml-1">{item.time}</span>
+                                        </td>
+                                        <td className="px-6 py-3">
+                                            <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase border ${
+                                                item.type === 'VENTA' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                                item.type === 'COMPRA' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                                item.type === 'INGRESO' ? 'bg-teal-50 text-teal-600 border-teal-100' :
+                                                item.type === 'EGRESO' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                                                'bg-slate-100 text-slate-600 border-slate-200'
+                                            }`}>
+                                                {item.type}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-3 font-bold text-slate-700 dark:text-white uppercase">
+                                            {item.tenant}
+                                        </td>
+                                        <td className="px-6 py-3 font-mono text-slate-500 text-[9px]">
+                                            {item.ref}
+                                        </td>
+                                        <td className="px-6 py-3 text-right font-black text-slate-800 dark:text-white">
+                                            {item.currency || 'PEN'} {item.amount?.toFixed(2)}
+                                        </td>
+                                    </tr>
+                                ))}
+                                {traceabilityList.length === 0 && (
+                                    <tr>
+                                        <td colSpan={6} className="py-20 text-center text-slate-300 font-black uppercase tracking-widest italic">
+                                            Sin registros de trazabilidad global
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             )}

@@ -1,9 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { ViewState, AuthSession, Branch } from '../types';
 import { 
   LayoutDashboard, ShoppingCart, Package, Wrench, 
   Wallet, Users, Activity, ShoppingBag, FolderCog, FileSearch, Truck, Landmark, Moon, Sun,
-  LogOut, Bell, TrendingUp, X, Cloud, RefreshCw, Smartphone, Tablet, Monitor, Store, Plus, ChevronDown, CheckCircle2
+  LogOut, Bell, TrendingUp, X, Cloud, RefreshCw, Smartphone, Tablet, Monitor, Store, Plus, ChevronDown, CheckCircle2, ChevronLeft
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -12,7 +12,9 @@ interface LayoutProps {
   companyLogo: string | null;
   navStructure: any[];
   currentView: ViewState;
+  activeFolder?: string | null;
   onNavigate: (view: ViewState) => void;
+  onBack?: () => void;
   isDarkMode: boolean;
   toggleTheme: () => void;
   session: AuthSession; 
@@ -31,8 +33,8 @@ const SafeIcon = ({ icon: IconComponent, ...props }: any) => {
 };
 
 const Layout: React.FC<LayoutProps> = ({ 
-  children, companyName, companyLogo, navStructure, currentView, 
-  onNavigate, isDarkMode, toggleTheme, session, onLogout, 
+  children, companyName, companyLogo, navStructure, currentView, activeFolder,
+  onNavigate, onBack, isDarkMode, toggleTheme, session, onLogout, 
   isSyncEnabled, toggleSyncMode, branches, currentBranchId, onSwitchBranch, onCreateBranch
 }) => {
   const [showNotifications, setShowNotifications] = useState(false);
@@ -42,6 +44,22 @@ const Layout: React.FC<LayoutProps> = ({
   const isSuperAdmin = session?.user.role === 'SUPER_ADMIN';
   const isGlobalView = currentView === ViewState.SUPER_ADMIN_DASHBOARD;
   const isDashboard = currentView === ViewState.DASHBOARD;
+  
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      onNavigate(ViewState.DASHBOARD);
+    }
+  };
 
   const currentBranch = branches.find(b => b.id === currentBranchId);
 
@@ -68,11 +86,26 @@ const Layout: React.FC<LayoutProps> = ({
             {/* Logo y Branding */}
             <div className="flex items-center shrink-0 pr-2 md:pr-4 mr-2 border-r border-white/10">
                 <button 
-                    onClick={() => onNavigate(isSuperAdmin ? ViewState.SUPER_ADMIN_DASHBOARD : ViewState.DASHBOARD)} 
+                    onClick={() => {
+                        if (onBack) {
+                            onBack();
+                        } else {
+                            const isInFolder = typeof window !== 'undefined' && window.location.hash.includes('folder');
+                            if (!isDashboard || isInFolder || activeFolder) {
+                                handleBack();
+                            } else {
+                                onNavigate(isSuperAdmin ? ViewState.SUPER_ADMIN_DASHBOARD : ViewState.DASHBOARD);
+                            }
+                        }
+                    }} 
                     className="flex items-center gap-2 md:gap-3 group transition-all active:scale-95"
                 >
                     <div className={`w-7 h-7 md:w-9 md:h-9 rounded-xl flex items-center justify-center border backdrop-blur-md transition-all shadow-inner ${isGlobalView ? 'bg-amber-500/20 border-amber-500/40' : 'bg-white/20 border-white/30'}`}>
-                       {companyLogo ? (
+                       {(!isDashboard || activeFolder || (typeof window !== 'undefined' && window.location.hash.includes('folder'))) ? (
+                         <div className="flex items-center justify-center">
+                            <ChevronLeft size={18} className="text-white animate-in fade-in zoom-in duration-300" />
+                         </div>
+                       ) : companyLogo ? (
                          <img src={companyLogo} alt="Logo" className="w-4 h-4 md:w-5 md:h-5 object-contain" />
                        ) : (
                          <span className="font-black text-base md:text-xl leading-none text-white">S</span>
@@ -89,62 +122,8 @@ const Layout: React.FC<LayoutProps> = ({
                 </button>
             </div>
 
-            {/* Selector de Sucursal */}
-            {!isGlobalView && (
-              <div className="relative mr-2 md:mr-4 group shrink-0">
-                <button 
-                  onClick={() => setShowBranchMenu(!showBranchMenu)}
-                  className="flex items-center gap-2 h-8 md:h-9 px-2 md:px-3 bg-white/10 hover:bg-white/20 rounded-xl border border-white/20 transition-all text-white group-hover:border-white/40"
-                >
-                  <div className="p-1 bg-white/20 rounded-lg"><Store size={12} className="text-white"/></div>
-                  <div className="flex flex-col items-start leading-none gap-0.5">
-                    <span className="text-[7px] font-bold opacity-60 uppercase tracking-widest hidden sm:block">Ubicación</span>
-                    <span className="text-[10px] font-black uppercase truncate max-w-[80px] md:max-w-[120px] flex items-center gap-1">
-                        {currentBranch?.name || 'Seleccionar'}
-                    </span>
-                  </div>
-                  <ChevronDown size={12} className="opacity-60 group-hover:opacity-100 transition-opacity hidden sm:block"/>
-                </button>
-
-                {showBranchMenu && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setShowBranchMenu(false)}></div>
-                    <div className="absolute top-11 left-0 w-64 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden z-50 animate-in slide-in-from-top-2">
-                        <div className="p-3 bg-slate-50 dark:bg-slate-950 border-b border-slate-100 dark:border-slate-800 text-[9px] font-black text-slate-400 uppercase tracking-widest flex justify-between items-center">
-                        <span>Mis Sucursales</span>
-                        <span className="bg-slate-200 dark:bg-slate-800 px-1.5 rounded text-slate-500">{branches.length}</span>
-                        </div>
-                        <div className="max-h-60 overflow-y-auto p-1 custom-scrollbar">
-                        {branches.map(b => (
-                            <button
-                            key={b.id}
-                            onClick={() => { onSwitchBranch(b.id); setShowBranchMenu(false); }}
-                            className={`w-full text-left px-3 py-2.5 flex items-center justify-between rounded-xl transition-colors mb-1 ${currentBranchId === b.id ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300'}`}
-                            >
-                            <div className="flex flex-col">
-                                <span className="text-[11px] font-black uppercase leading-tight">{b.name}</span>
-                                <span className="text-[9px] font-bold opacity-60 truncate max-w-[180px]">{b.address || 'Sin dirección'}</span>
-                            </div>
-                            {currentBranchId === b.id && <CheckCircle2 size={16} className="text-indigo-500"/>}
-                            </button>
-                        ))}
-                        </div>
-                        <div className="p-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
-                        <button 
-                            onClick={() => { onNavigate(ViewState.BRANCH_MANAGEMENT); setShowBranchMenu(false); }}
-                            className="w-full py-2.5 bg-slate-200 dark:bg-slate-800 rounded-xl text-[9px] font-black uppercase text-slate-600 dark:text-slate-400 hover:bg-indigo-100 hover:text-indigo-600 dark:hover:bg-indigo-900/30 transition-all flex items-center justify-center gap-2"
-                        >
-                            <Plus size={12}/> Gestionar Sucursales
-                        </button>
-                        </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-
             {/* Navegación Segmentada */}
-            <nav className={`flex-1 flex items-center justify-start lg:justify-center gap-1 h-full px-0 md:px-2 overflow-x-auto no-scrollbar min-w-0 ${isDashboard ? 'hidden md:flex' : 'flex'}`}>
+            <nav className={`flex-1 flex items-center justify-start lg:justify-center gap-1 h-full px-0 md:px-2 overflow-x-auto no-scrollbar min-w-0 ${isDashboard ? 'hidden md:flex' : 'hidden md:flex'}`}>
                 {navStructure.map((cat) => {
                     const isActive = activeCategory?.id === cat.id;
                     return (
@@ -213,20 +192,63 @@ const Layout: React.FC<LayoutProps> = ({
       </header>
 
       {activeCategory && activeCategory.items && (
-          <div className={`px-2 md:px-6 pb-2 shrink-0 animate-in slide-in-from-top-1 duration-300 ${isDashboard ? 'hidden md:block' : 'block'}`}>
-              <div className="mx-auto h-9 md:h-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-center px-2 md:px-4 overflow-x-auto no-scrollbar gap-1 w-full">
+          <div className={`px-2 md:px-6 pb-2 shrink-0 animate-in slide-in-from-top-1 duration-300 ${isDashboard ? 'hidden md:block' : 'hidden md:block'}`}>
+              <div className="mx-auto h-12 md:h-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-center px-2 md:px-4 overflow-x-auto no-scrollbar gap-1 w-full">
+                  {/* Selector de Sucursal (Movido a Ajustes) */}
+                  {activeCategory?.id === 'configuracion' && (
+                    <div className="relative group shrink-0 mr-2 border-r border-slate-200 dark:border-slate-700 pr-2">
+                      <button 
+                        onClick={() => setShowBranchMenu(!showBranchMenu)}
+                        className="flex flex-col md:flex-row items-center gap-0.5 md:gap-2 h-10 md:h-7 px-2 bg-primary/10 hover:bg-primary/20 rounded-lg transition-all text-primary"
+                      >
+                        <Store size={12}/>
+                        <span className="text-[7px] md:text-[9px] font-black uppercase truncate max-w-[60px] md:max-w-[100px]">
+                            {currentBranch?.name || 'Sede'}
+                        </span>
+                        <ChevronDown size={10} className="opacity-60 hidden md:block"/>
+                      </button>
+
+                      {showBranchMenu && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setShowBranchMenu(false)}></div>
+                          <div className="absolute top-11 md:top-9 left-0 w-64 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden z-50 animate-in slide-in-from-top-2">
+                              <div className="p-3 bg-slate-50 dark:bg-slate-950 border-b border-slate-100 dark:border-slate-800 text-[9px] font-black text-slate-400 uppercase tracking-widest flex justify-between items-center">
+                                <span>Mis Sucursales</span>
+                                <span className="bg-slate-200 dark:bg-slate-800 px-1.5 rounded text-slate-500">{branches.length}</span>
+                              </div>
+                              <div className="max-h-60 overflow-y-auto p-1 custom-scrollbar">
+                                {branches.map(b => (
+                                    <button
+                                      key={b.id}
+                                      onClick={() => { onSwitchBranch(b.id); setShowBranchMenu(false); }}
+                                      className={`w-full text-left px-3 py-2.5 flex items-center justify-between rounded-xl transition-colors mb-1 ${currentBranchId === b.id ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300'}`}
+                                    >
+                                      <div className="flex flex-col">
+                                          <span className="text-[11px] font-black uppercase leading-tight">{b.name}</span>
+                                          <span className="text-[9px] font-bold opacity-60 truncate max-w-[180px]">{b.address || 'Sin dirección'}</span>
+                                      </div>
+                                      {currentBranchId === b.id && <CheckCircle2 size={16} className="text-indigo-500"/>}
+                                    </button>
+                                ))}
+                              </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+
                   {activeCategory.items.map((item: any) => {
                       const isActiveSub = currentView === item.view;
                       return (
                           <button
                               key={item.view}
                               onClick={() => onNavigate(item.view)}
-                              className={`flex items-center gap-2 px-3 md:px-4 py-1.5 rounded-xl text-[9px] md:text-[10px] font-black transition-all whitespace-nowrap shrink-0
+                              className={`flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-2 px-1.5 md:px-4 py-1 md:py-1.5 rounded-xl text-[6px] md:text-[10px] font-black transition-all whitespace-nowrap shrink-0
                                   ${isActiveSub ? 'bg-primary/10 text-primary' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'}
                               `}
                           >
-                              <SafeIcon icon={item.icon} size={12} className={isActiveSub ? 'text-primary' : 'opacity-60'}/>
-                              <span className="uppercase tracking-widest">{item.label}</span>
+                              <SafeIcon icon={item.icon} size={14} className={isActiveSub ? 'text-primary' : 'opacity-60'}/>
+                              <span className="uppercase tracking-tighter md:tracking-widest leading-none max-w-[40px] md:max-w-none truncate">{item.label}</span>
                           </button>
                       )
                   })}

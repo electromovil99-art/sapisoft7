@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Smartphone, Search, Filter, Wrench, X, Save, Clock, CheckCircle, AlertCircle, Calendar, User, UserCog, Printer, Package, Plus, Trash2, ArrowRight, UserPlus, CreditCard, Phone, Banknote, QrCode, Landmark, Calculator, Receipt, Ban, CheckSquare, ChevronDown, Edit3, MessageCircle, Send, CornerUpLeft, MoreVertical, Wallet, Lock, ShieldAlert, ListChecks, Tablet, Hash, CloudDownload, Loader2, Zap, Unlock } from 'lucide-react';
+import { Smartphone, Search, Filter, Wrench, X, Save, Clock, CheckCircle, AlertCircle, Calendar, User, UserCog, Printer, Package, Plus, Minus, Trash2, ArrowRight, UserPlus, CreditCard, Phone, Banknote, QrCode, Landmark, Calculator, Receipt, Ban, CheckSquare, ChevronDown, Edit3, MessageCircle, Send, CornerUpLeft, MoreVertical, Wallet, Lock, ShieldAlert, ListChecks, Tablet, Hash, CloudDownload, Loader2, Zap, Unlock } from 'lucide-react';
 import { ServiceOrder, Product, ServiceProductItem, PaymentBreakdown, Category, Client, BankAccount, PaymentMethodType, GeoLocation } from '../types';
 
 interface ServicesProps {
@@ -9,6 +9,7 @@ interface ServicesProps {
   categories: Category[]; 
   bankAccounts: BankAccount[]; 
   onAddService: (service: ServiceOrder) => void;
+  onUpdateService?: (service: ServiceOrder) => void;
   onFinalizeService: (serviceId: string, total: number, finalStatus: 'Entregado' | 'Devolucion', paymentBreakdown: PaymentBreakdown) => void;
   onMarkRepaired: (serviceId: string) => void;
   clients?: Client[]; 
@@ -27,9 +28,10 @@ interface PaymentDetail {
     bankName?: string;
 }
 
-export const ServicesModule: React.FC<ServicesProps> = ({ services, products, categories, bankAccounts, onAddService, onFinalizeService, onMarkRepaired, clients, onAddClient, onOpenWhatsApp, locations, currentBranchId }) => {
+export const ServicesModule: React.FC<ServicesProps> = ({ services, products, categories, bankAccounts, onAddService, onUpdateService, onFinalizeService, onMarkRepaired, clients, onAddClient, onOpenWhatsApp, locations, currentBranchId }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [productSearch, setProductSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(''); 
   const [statusFilter, setStatusFilter] = useState<'Todos' | 'Pendiente' | 'Reparado' | 'Entregado' | 'Devolucion'>('Todos');
@@ -72,6 +74,7 @@ export const ServicesModule: React.FC<ServicesProps> = ({ services, products, ca
       reference: string;
       accountId: string;
   }>({ method: 'Efectivo', amount: '', reference: '', accountId: '' });
+  const [confirmFinalize, setConfirmFinalize] = useState(false);
 
   const [showTicket, setShowTicket] = useState(false);
   const [ticketData, setTicketData] = useState<any>(null);
@@ -117,6 +120,25 @@ export const ServicesModule: React.FC<ServicesProps> = ({ services, products, ca
     }, 1000);
   };
 
+  const handleAddLaborAsProduct = () => {
+      const amount = parseFloat(laborInput);
+      if (isNaN(amount) || amount <= 0) return alert("Ingrese un monto válido de mano de obra");
+      
+      const laborItem: ServiceProductItem = {
+          productId: 'MANO-DE-OBRA',
+          productName: 'MANO DE OBRA',
+          quantity: 1,
+          price: amount
+      };
+
+      setNewOrder(prev => ({
+          ...prev,
+          usedProducts: [...(prev.usedProducts || []), laborItem],
+          cost: 0 // Clear the separate labor cost to avoid double counting
+      }));
+      setLaborInput('0');
+  };
+
   const calculateOrderTotal = (order: ServiceOrder | Partial<ServiceOrder>) => {
       const productsTotal = (order.usedProducts || []).reduce((sum, item) => sum + (item.price * item.quantity), 0);
       return (order.cost || 0) + productsTotal;
@@ -124,6 +146,28 @@ export const ServicesModule: React.FC<ServicesProps> = ({ services, products, ca
 
   const getPaymentTotal = () => paymentList.reduce((acc, p) => acc + p.amount, 0);
   const remainingTotal = Math.max(0, (selectedService ? calculateOrderTotal(selectedService) : 0) - getPaymentTotal());
+
+  const handleEditService = (s: ServiceOrder) => {
+      setNewOrder({
+          id: s.id,
+          client: s.client,
+          clientPhone: s.clientPhone,
+          deviceModel: s.deviceModel,
+          issue: s.issue,
+          status: s.status,
+          technician: s.technician,
+          receptionist: s.receptionist,
+          cost: s.cost,
+          usedProducts: [...s.usedProducts],
+          entryDate: s.entryDate,
+          entryTime: s.entryTime,
+          color: s.color
+      });
+      setLaborInput(s.cost.toString()); 
+      setIsEditMode(true);
+      setShowModal(true);
+      setOpenMenuId(null);
+  };
 
   const handleWhatsAppNotify = (service: ServiceOrder) => {
       const total = calculateOrderTotal(service).toFixed(2);
@@ -195,6 +239,19 @@ export const ServicesModule: React.FC<ServicesProps> = ({ services, products, ca
       }
   };
 
+  const updateProductQuantity = (productId: string, delta: number) => {
+      setNewOrder(prev => ({
+          ...prev,
+          usedProducts: (prev.usedProducts || []).map(p => {
+              if (p.productId === productId) {
+                  const newQty = Math.max(1, p.quantity + delta);
+                  return { ...p, quantity: newQty };
+              }
+              return p;
+          })
+      }));
+  };
+
   const applyLaborChange = (val: string) => {
       setLaborInput(val);
       const num = val === '' ? 0 : parseFloat(val);
@@ -235,6 +292,8 @@ export const ServicesModule: React.FC<ServicesProps> = ({ services, products, ca
   const handleAddPayment = () => {
       const amountVal = parseFloat(currentPayment.amount);
       if (isNaN(amountVal) || amountVal <= 0) return alert("Ingrese un monto válido");
+      if (currentPayment.method !== 'Efectivo' && !currentPayment.accountId) return alert("Debe seleccionar la cuenta de destino");
+      
       const bankInfo = bankAccounts.find(b => b.id === currentPayment.accountId);
       const newPay: PaymentDetail = { 
           id: Math.random().toString(), method: currentPayment.method, amount: amountVal, reference: currentPayment.reference, accountId: currentPayment.accountId, bankName: bankInfo ? (bankInfo.alias || bankInfo.bankName) : undefined 
@@ -264,11 +323,35 @@ export const ServicesModule: React.FC<ServicesProps> = ({ services, products, ca
           client: selectedService.client, 
           clientDni: clientObj?.dni || "00000000",
           typeLabel: 'ORDEN DE SERVICIO',
-          items: [{ desc: `MANO DE OBRA ${selectedService.deviceModel}`, price: selectedService.cost }, ...(selectedService.usedProducts || []).map(p => ({ desc: p.productName, price: p.price * p.quantity }))],
+          items: [
+              ...(selectedService.cost > 0 ? [{ desc: `MANO DE OBRA`, price: selectedService.cost }] : []), 
+              ...(selectedService.usedProducts || []).map(p => ({ desc: p.productName, price: p.price * p.quantity }))
+          ],
           total: calculateOrderTotal(selectedService), detailedPayments: paymentList, change: 0
       });
       setShowDeliverModal(false);
       setShowTicket(true);
+  };
+
+  const handleReprintTicket = (s: ServiceOrder) => {
+      const clientObj = clients?.find(c => c.name === s.client);
+      setTicketData({
+          orderId: s.id, 
+          date: s.exitDate || s.entryDate, 
+          time: s.exitTime || s.entryTime, 
+          client: s.client, 
+          clientDni: clientObj?.dni || "00000000",
+          typeLabel: 'ORDEN DE SERVICIO',
+          items: [
+              ...(s.cost > 0 ? [{ desc: `MANO DE OBRA`, price: s.cost }] : []), 
+              ...(s.usedProducts || []).map(p => ({ desc: p.productName, price: p.price * p.quantity }))
+          ],
+          total: calculateOrderTotal(s), 
+          detailedPayments: [], 
+          change: 0
+      });
+      setShowTicket(true);
+      setOpenMenuId(null);
   };
 
   const normalize = (text: string) => (text || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -300,30 +383,32 @@ export const ServicesModule: React.FC<ServicesProps> = ({ services, products, ca
           ))}
        </div>
 
-       <div className="flex justify-between items-center bg-white dark:bg-slate-800 px-5 py-3 rounded-2xl shadow-sm border border-slate-200">
-          <div className="flex items-center gap-4">
-              <h2 className="text-[11px] font-black text-slate-700 dark:text-white flex items-center gap-2 uppercase tracking-widest"><Wrench className="text-primary-600" size={16}/> Servicio Técnico</h2>
-              <div className="relative">
+       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center bg-white dark:bg-slate-800 px-4 sm:px-5 py-3 rounded-2xl shadow-sm border border-slate-200 gap-3 sm:gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 w-full lg:w-auto">
+              <h2 className="text-[11px] font-black text-slate-700 dark:text-white flex items-center gap-2 uppercase tracking-widest shrink-0"><Wrench className="text-primary-600" size={16}/> Servicio Técnico</h2>
+              <div className="relative w-full sm:w-80">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14}/>
-                  <input type="text" placeholder="Buscar por Cliente, DNI, Equipo o Ticket..." className="pl-9 pr-4 py-1.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 rounded-xl text-[10px] w-80 outline-none focus:border-primary-500" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                  <input type="text" placeholder="Buscar por Cliente, DNI, Equipo o Ticket..." className="pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 rounded-xl text-[10px] w-full outline-none focus:border-primary-500" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
               </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 w-full sm:w-auto">
               <button 
                 onClick={toggleAutoNotify}
-                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all border ${autoNotify ? 'bg-green-100 text-green-700 border-green-200 shadow-sm' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}
+                className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-2 transition-all border ${autoNotify ? 'bg-green-100 text-green-700 border-green-200 shadow-sm' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}
                 title="Activar envío automático de WhatsApp al marcar como reparado"
               >
                   {autoNotify ? <Zap size={14} className="fill-green-600"/> : <Zap size={14}/>}
-                  {autoNotify ? 'Auto-Notificar ON' : 'Auto-Notificar OFF'}
+                  <span className="hidden xs:inline">{autoNotify ? 'Auto-Notificar ON' : 'Auto-Notificar OFF'}</span>
+                  <span className="xs:hidden">{autoNotify ? 'ON' : 'OFF'}</span>
               </button>
-              <button onClick={() => { setLaborInput('0'); setNewOrder({ client: '', deviceModel: '', receptionist: 'ADMIN', cost: 0, usedProducts: [], entryDate: getCurrentDate(), entryTime: getCurrentTime() }); setShowModal(true); }} className="bg-primary-600 text-white px-4 py-2 rounded-xl text-[10px] font-black hover:bg-primary-700 shadow-lg flex items-center gap-2 transition-all active:scale-95"><Plus size={14}/> NUEVA RECEPCIÓN</button>
+              <button onClick={() => { setLaborInput('0'); setNewOrder({ client: '', deviceModel: '', receptionist: 'ADMIN', cost: 0, usedProducts: [], entryDate: getCurrentDate(), entryTime: getCurrentTime() }); setIsEditMode(false); setShowModal(true); }} className="flex-1 sm:flex-none bg-primary-600 text-white px-4 py-2 rounded-xl text-[10px] font-black hover:bg-primary-700 shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95"><Plus size={14}/> <span className="hidden xs:inline">NUEVA RECEPCIÓN</span><span className="xs:hidden">NUEVO</span></button>
           </div>
        </div>
 
        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex-1 flex flex-col">
             <div className="overflow-auto flex-1">
-                <table className="w-full text-[10px] text-left">
+                {/* Desktop Table View */}
+                <table className="w-full text-[10px] text-left hidden md:table">
                     <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-700 text-slate-400 font-black uppercase tracking-widest border-b">
                         <tr><th className="px-5 py-3">Orden</th><th className="px-5 py-3">Ingreso</th><th className="px-5 py-3">Cliente / Equipo</th><th className="px-5 py-3">Detalle</th><th className="px-5 py-3">Personal</th><th className="px-5 py-3 text-center">Estado</th><th className="px-5 py-3 text-right">Total</th><th className="px-5 py-3 text-center">Acciones</th></tr>
                     </thead>
@@ -353,11 +438,15 @@ export const ServicesModule: React.FC<ServicesProps> = ({ services, products, ca
                                     
                                     {openMenuId === s.id && (
                                         <div className="absolute right-10 top-0 w-44 bg-white shadow-2xl rounded-xl z-[50] border border-slate-100 py-1 text-left animate-in zoom-in-95">
-                                            {/* WhatsApp deshabilitado si ya fue entregado */}
                                             {s.status !== 'Entregado' && (
-                                                <button onClick={() => { handleWhatsAppNotify(s); setOpenMenuId(null); }} className="w-full px-3 py-2 text-[9px] font-black text-slate-600 flex items-center gap-2 hover:bg-emerald-50">
-                                                    <MessageCircle size={12} className="text-emerald-500"/> Notificar Equipo
-                                                </button>
+                                                <>
+                                                    <button onClick={() => handleEditService(s)} className="w-full px-3 py-2 text-[9px] font-black text-slate-600 flex items-center gap-2 hover:bg-blue-50">
+                                                        <Edit3 size={12} className="text-blue-500"/> Editar Servicio
+                                                    </button>
+                                                    <button onClick={() => { handleWhatsAppNotify(s); setOpenMenuId(null); }} className="w-full px-3 py-2 text-[9px] font-black text-slate-600 flex items-center gap-2 hover:bg-emerald-50">
+                                                        <MessageCircle size={12} className="text-emerald-500"/> Notificar Equipo
+                                                    </button>
+                                                </>
                                             )}
                                             {s.status === 'Pendiente' && (
                                                 <button 
@@ -369,6 +458,11 @@ export const ServicesModule: React.FC<ServicesProps> = ({ services, products, ca
                                                 </button>
                                             )}
                                             {(s.status === 'Reparado' || s.status === 'Pendiente') && <button onClick={() => { setSelectedService(s); setPaymentList([]); setCurrentPayment({method:'Efectivo', amount: calculateOrderTotal(s).toFixed(2), reference:'', accountId:''}); setShowDeliverModal(true); setOpenMenuId(null); }} className="w-full px-3 py-2 text-[9px] font-black text-slate-600 flex items-center gap-2 hover:bg-emerald-50"><CheckCircle size={12} className="text-emerald-500"/> Entregar / Cobrar</button>}
+                                            {s.status === 'Entregado' && (
+                                                <button onClick={() => handleReprintTicket(s)} className="w-full px-3 py-2 text-[9px] font-black text-slate-600 flex items-center gap-2 hover:bg-slate-50">
+                                                    <Printer size={12} className="text-slate-400"/> Reimprimir Ticket
+                                                </button>
+                                            )}
                                         </div>
                                     )}
                                 </td>
@@ -376,106 +470,275 @@ export const ServicesModule: React.FC<ServicesProps> = ({ services, products, ca
                         ))}
                     </tbody>
                 </table>
+
+                <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-700">
+                    {filteredServices.map(s => (
+                        <div key={s.id} className="p-4 space-y-3 bg-white dark:bg-slate-800">
+                            <div className="flex justify-between items-start">
+                                <div className="flex flex-col">
+                                    <span className="font-mono font-black text-primary-600 text-[10px]">#{s.id}</span>
+                                    <span className="text-[8px] text-slate-400 font-bold uppercase">{s.entryDate} {s.entryTime}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase border ${s.status === 'Entregado' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : s.status === 'Pendiente' ? 'bg-red-50 text-red-600 border-red-100' : s.status === 'Reparado' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-slate-50 text-slate-400 border-slate-200'}`}>{s.status}</span>
+                                    <div className="relative">
+                                        <button 
+                                            onClick={() => setOpenMenuId(openMenuId === s.id ? null : s.id)} 
+                                            className="p-1.5 text-slate-300 hover:text-slate-800"
+                                        >
+                                            <MoreVertical size={16}/>
+                                        </button>
+                                        {openMenuId === s.id && (
+                                            <div className="absolute right-0 top-8 w-44 bg-white dark:bg-slate-700 shadow-2xl rounded-xl z-[50] border border-slate-100 dark:border-slate-600 py-1 text-left animate-in zoom-in-95">
+                                                {s.status !== 'Entregado' && (
+                                                    <>
+                                                        <button onClick={() => handleEditService(s)} className="w-full px-3 py-2 text-[9px] font-black text-slate-600 dark:text-slate-200 flex items-center gap-2 hover:bg-blue-50 dark:hover:bg-blue-900/20">
+                                                            <Edit3 size={12} className="text-blue-500"/> Editar Servicio
+                                                        </button>
+                                                        <button onClick={() => { handleWhatsAppNotify(s); setOpenMenuId(null); }} className="w-full px-3 py-2 text-[9px] font-black text-slate-600 dark:text-slate-200 flex items-center gap-2 hover:bg-emerald-50 dark:hover:bg-emerald-900/20">
+                                                            <MessageCircle size={12} className="text-emerald-500"/> Notificar Equipo
+                                                        </button>
+                                                    </>
+                                                )}
+                                                {s.status === 'Pendiente' && (
+                                                    <button onClick={() => handleMarkAndNotify(s)} className="w-full px-3 py-2 text-[9px] font-black text-slate-600 dark:text-slate-200 flex items-center gap-2 hover:bg-blue-50 dark:hover:bg-blue-900/20">
+                                                        <CheckSquare size={12} className="text-blue-500"/> {autoNotify ? 'Listo + Notificar' : 'Marcar Listo'}
+                                                    </button>
+                                                )}
+                                                {(s.status === 'Reparado' || s.status === 'Pendiente') && <button onClick={() => { setSelectedService(s); setPaymentList([]); setCurrentPayment({method:'Efectivo', amount: calculateOrderTotal(s).toFixed(2), reference:'', accountId:''}); setConfirmFinalize(false); setShowDeliverModal(true); setOpenMenuId(null); }} className="w-full px-3 py-2 text-[9px] font-black text-slate-600 dark:text-slate-200 flex items-center gap-2 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"><CheckCircle size={12} className="text-emerald-500"/> Entregar / Cobrar</button>}
+                                                {s.status === 'Entregado' && (
+                                                    <button onClick={() => handleReprintTicket(s)} className="w-full px-3 py-2 text-[9px] font-black text-slate-600 dark:text-slate-200 flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-600/20">
+                                                        <Printer size={12} className="text-slate-400"/> Reimprimir Ticket
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="space-y-1">
+                                <div className="font-black text-slate-700 dark:text-white uppercase text-[11px]">{s.client}</div>
+                                <div className="text-[10px] text-slate-500 flex items-center gap-1 font-bold"><Smartphone size={12}/> {s.deviceModel}</div>
+                                <div className="text-[9px] text-slate-400 italic">"{s.issue}"</div>
+                            </div>
+                            <div className="flex justify-between items-end pt-2 border-t border-slate-50 dark:border-slate-700">
+                                <div className="flex flex-col gap-0.5 text-[8px] font-black uppercase">
+                                    <span className="text-violet-600 flex items-center gap-1"><UserCog size={10}/> {s.technician}</span>
+                                    <span className="text-blue-500 flex items-center gap-1"><User size={10}/> {s.receptionist}</span>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-[10px] font-black text-slate-800 dark:text-white tracking-tighter">S/ {calculateOrderTotal(s).toFixed(2)}</div>
+                                    <div className="text-[7px] text-slate-400 font-bold uppercase">Total a Pagar</div>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
-       </div>
+        </div>
 
        {showDeliverModal && selectedService && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[999] flex items-center justify-center p-4">
-           <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-[720px] overflow-hidden flex flex-col border border-white/20 animate-in zoom-in-95">
-              <div className="px-6 py-4 flex justify-between items-center border-b border-slate-100 bg-slate-50/50">
-                  <h3 className="text-sm font-black text-slate-800 flex items-center gap-2 uppercase tracking-tighter"><Calculator size={18} className="text-emerald-600"/> Confirmar Liquidación <span className="mx-1 text-slate-300">|</span> <span className="text-slate-400 font-bold text-[10px] uppercase">ORDEN #{selectedService.id}</span></h3>
-                  <button onClick={() => setShowDeliverModal(false)} className="p-1.5 hover:bg-slate-200 rounded-full"><X size={18}/></button>
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[999] flex items-end sm:items-center justify-center p-0 sm:p-4">
+           <div className="bg-white dark:bg-slate-800 rounded-t-[2.5rem] sm:rounded-3xl shadow-2xl w-full max-w-[720px] h-[90vh] sm:h-auto overflow-hidden flex flex-col border border-white/20 animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-300">
+              <div className="px-6 py-4 flex justify-between items-center border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 shrink-0">
+                  <h3 className="text-sm font-black text-slate-800 dark:text-white flex items-center gap-2 uppercase tracking-tighter"><Calculator size={18} className="text-emerald-600"/> Confirmar Liquidación <span className="hidden xs:inline mx-1 text-slate-300">|</span> <span className="text-slate-400 font-bold text-[10px] uppercase">ORDEN #{selectedService.id}</span></h3>
+                  <button onClick={() => setShowDeliverModal(false)} className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full"><X size={18}/></button>
               </div>
-              <div className="flex flex-1 min-h-[380px]">
-                  <div className="w-[45%] p-6 flex flex-col border-r border-slate-100 bg-slate-50/30">
+              <div className="flex flex-col lg:flex-row flex-1 overflow-auto">
+                  <div className="w-full lg:w-[45%] p-6 flex flex-col border-b lg:border-b-0 lg:border-r border-slate-100 dark:border-slate-700 bg-slate-50/30 dark:bg-slate-900/30">
                       <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><ListChecks size={14}/> RESUMEN COBRO</h4>
-                      <div className="flex-1 overflow-y-auto border-2 border-dashed border-slate-200 rounded-2xl mb-4 bg-white p-3 space-y-2">
+                      <div className="min-h-[120px] lg:flex-1 overflow-y-auto border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl mb-4 bg-white dark:bg-slate-800/50 p-3 space-y-2">
                           {paymentList.length === 0 ? (
                               <div className="h-full flex flex-col items-center justify-center opacity-30"><Tablet size={40}/><p className="text-[9px] font-bold uppercase mt-2">Sin pagos</p></div>
                           ) : paymentList.map(p => (
-                              <div key={p.id} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100"><div className="min-w-0"><p className="text-[9px] font-black uppercase text-slate-700">{p.method}</p>{p.reference && <p className="text-[8px] text-slate-400 font-mono">OP: {p.reference}</p>}</div><div className="flex items-center gap-3"><span className="font-black text-xs">S/ {p.amount.toFixed(2)}</span><button onClick={() => setPaymentList(paymentList.filter(x => x.id !== p.id))} className="text-red-300 hover:text-red-500"><Trash2 size={14}/></button></div></div>
+                              <div key={p.id} className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-700 rounded-xl border border-slate-100 dark:border-slate-600"><div className="min-w-0"><p className="text-[9px] font-black uppercase text-slate-700 dark:text-white">{p.method}</p>{p.reference && <p className="text-[8px] text-slate-400 font-mono">OP: {p.reference}</p>}</div><div className="flex items-center gap-3"><span className="font-black text-xs">S/ {p.amount.toFixed(2)}</span><button onClick={() => setPaymentList(paymentList.filter(x => x.id !== p.id))} className="text-red-300 hover:text-red-500"><Trash2 size={14}/></button></div></div>
                           ))}
                       </div>
                       <div className="space-y-2">
-                          <div className="flex justify-between text-xs font-bold text-slate-500"><span>Subtotal:</span><span className="text-slate-800">S/ {calculateOrderTotal(selectedService).toFixed(2)}</span></div>
-                          <div className="flex justify-between items-baseline pt-2 border-t border-slate-200"><span className="font-black text-red-600 text-[10px] uppercase">Saldo Pendiente:</span><span className="text-2xl font-black text-red-600">S/ {remainingTotal.toFixed(2)}</span></div>
+                          <div className="flex justify-between text-xs font-bold text-slate-500"><span>Subtotal:</span><span className="text-slate-800 dark:text-white">S/ {calculateOrderTotal(selectedService).toFixed(2)}</span></div>
+                          <div className="flex justify-between items-baseline pt-2 border-t border-slate-200 dark:border-slate-700"><span className="font-black text-red-600 text-[10px] uppercase">Saldo Pendiente:</span><span className="text-2xl font-black text-red-600">S/ {remainingTotal.toFixed(2)}</span></div>
                       </div>
                   </div>
                   <div className="flex-1 p-6 flex flex-col gap-5">
                       <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Plus size={14}/> AGREGAR MEDIO</h4>
                       <div className="space-y-4">
-                          <div className="grid grid-cols-2 gap-2">{['Efectivo', 'Yape/Plin', 'Tarjeta', 'Deposito'].map(m => (<button key={m} onClick={() => setCurrentPayment({...currentPayment, method: m as any, reference: ''})} className={`py-2 px-3 rounded-xl border-2 font-bold text-[10px] uppercase transition-all ${currentPayment.method === m ? 'bg-primary-600 border-primary-600 text-white shadow-lg' : 'bg-white text-slate-400 border-slate-100 hover:border-slate-200'}`}>{m}</button>))}</div>
-                          {currentPayment.method !== 'Efectivo' && (<div className="space-y-1"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">NRO. OPERACIÓN</label><input type="text" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold uppercase outline-none focus:border-primary-500" value={currentPayment.reference} onChange={e => setCurrentPayment({...currentPayment, reference: e.target.value})}/></div>)}
-                          <div className="space-y-1"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">MONTO</label><div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-black text-slate-300 italic">S/</span><input type="number" className="w-full pl-12 p-4 bg-white border-2 border-slate-100 rounded-2xl text-4xl font-black text-slate-800 outline-none shadow-inner focus:border-primary-500" value={currentPayment.amount} onChange={e => setCurrentPayment({...currentPayment, amount: e.target.value})}/></div></div>
-                          <button onClick={handleAddPayment} className="w-full py-3.5 bg-slate-800 text-white rounded-2xl font-black flex items-center justify-center gap-2 shadow-xl active:scale-95 transition-all uppercase text-[11px] tracking-widest"><Plus size={18}/> Agregar Pago</button>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-2">{['Efectivo', 'Yape/Plin', 'Tarjeta', 'Deposito'].map(m => (<button key={m} onClick={() => setCurrentPayment({...currentPayment, method: m as any, reference: '', accountId: ''})} className={`py-2 px-3 rounded-xl border-2 font-bold text-[10px] uppercase transition-all ${currentPayment.method === m ? 'bg-primary-600 border-primary-600 text-white shadow-lg' : 'bg-white dark:bg-slate-700 text-slate-400 border-slate-100 dark:border-slate-600 hover:border-slate-200'}`}>{m}</button>))}</div>
+                          
+                          {currentPayment.method !== 'Efectivo' && (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                  <div className="space-y-1">
+                                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">CUENTA DESTINO</label>
+                                      <select 
+                                          className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold uppercase outline-none focus:border-primary-500"
+                                          value={currentPayment.accountId}
+                                          onChange={e => setCurrentPayment({...currentPayment, accountId: e.target.value})}
+                                      >
+                                          <option value="">SELECCIONAR CUENTA...</option>
+                                          {bankAccounts.filter(b => b.useInSales).map(b => (
+                                              <option key={b.id} value={b.id}>{b.alias || b.bankName} - {b.accountNumber}</option>
+                                          ))}
+                                      </select>
+                                  </div>
+                                  <div className="space-y-1">
+                                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">NRO. OPERACIÓN</label>
+                                      <input type="text" className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold uppercase outline-none focus:border-primary-500" value={currentPayment.reference} onChange={e => setCurrentPayment({...currentPayment, reference: e.target.value})}/>
+                                  </div>
+                              </div>
+                          )}
+
+                          <div className="space-y-1">
+                              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">MONTO</label>
+                              <div className="relative">
+                                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl sm:text-2xl font-black text-slate-300 italic">S/</span>
+                                  <input 
+                                      type="number" 
+                                      onWheel={(e) => (e.target as HTMLInputElement).blur()} 
+                                      onKeyDown={(e) => {
+                                          if (e.key === 'Enter') {
+                                              if (remainingTotal <= 0.05) {
+                                                  if (confirmFinalize) {
+                                                      handleFinalizeDeliver();
+                                                      setConfirmFinalize(false);
+                                                  } else {
+                                                      setConfirmFinalize(true);
+                                                  }
+                                              } else {
+                                                  handleAddPayment();
+                                                  setConfirmFinalize(false);
+                                              }
+                                          } else {
+                                              setConfirmFinalize(false);
+                                          }
+                                      }}
+                                      className={`w-full pl-10 sm:pl-12 p-3 sm:p-4 bg-white dark:bg-slate-900 border-2 rounded-2xl text-2xl sm:text-4xl font-black outline-none shadow-inner transition-all ${confirmFinalize ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600' : 'border-slate-100 dark:border-slate-700 text-slate-800 dark:text-white focus:border-primary-500'}`}
+                                      value={currentPayment.amount} 
+                                      onChange={e => {
+                                          setCurrentPayment({...currentPayment, amount: e.target.value});
+                                          setConfirmFinalize(false);
+                                      }}
+                                  />
+                                  {confirmFinalize && (
+                                      <div className="absolute -top-6 left-0 right-0 text-center animate-bounce">
+                                          <span className="bg-emerald-600 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg uppercase tracking-widest">
+                                              ¿Confirmar Pago? Presione Enter de nuevo
+                                          </span>
+                                      </div>
+                                  )}
+                              </div>
+                          </div>
+                          <button onClick={handleAddPayment} className="w-full py-3.5 bg-slate-800 dark:bg-slate-700 text-white rounded-2xl font-black flex items-center justify-center gap-2 shadow-xl active:scale-95 transition-all uppercase text-[11px] tracking-widest"><Plus size={18}/> Agregar Pago</button>
                       </div>
                   </div>
               </div>
-              <div className="p-5 bg-slate-50 border-t border-slate-100 flex justify-end gap-3"><button onClick={() => setShowDeliverModal(false)} className="px-6 py-3 text-slate-500 font-black hover:bg-slate-200 rounded-xl uppercase text-[10px]">Cerrar</button><button onClick={handleFinalizeDeliver} disabled={remainingTotal > 0.05} className="px-10 py-3 bg-emerald-600 text-white font-black rounded-xl shadow-xl hover:bg-emerald-700 transition-all uppercase text-[10px] flex items-center gap-2 disabled:opacity-30"><CheckCircle size={18}/> Finalizar Entrega</button></div>
+              <div className="p-5 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-3 shrink-0 sticky bottom-0 z-10">
+                  <button onClick={() => setShowDeliverModal(false)} className="px-6 py-3 text-slate-500 font-black hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl uppercase text-[10px] hidden sm:block">Cerrar</button>
+                  <button 
+                    onClick={() => { 
+                        if (confirmFinalize) {
+                            handleFinalizeDeliver();
+                            setConfirmFinalize(false);
+                        } else {
+                            setConfirmFinalize(true);
+                        }
+                    }} 
+                    disabled={remainingTotal > 0.05} 
+                    className={`flex-1 sm:flex-none px-10 py-4 sm:py-3 font-black rounded-xl shadow-xl transition-all uppercase text-[11px] sm:text-[10px] flex items-center justify-center gap-2 disabled:opacity-30 ${confirmFinalize ? 'bg-emerald-500 animate-pulse scale-105' : 'bg-emerald-600 hover:bg-emerald-700'}`}
+                  >
+                    <CheckCircle size={18}/> {confirmFinalize ? '¡PRESIONE OTRA VEZ!' : 'Finalizar Entrega'}
+                  </button>
+              </div>
            </div>
         </div>
        )}
 
        {showModal && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[999] flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-slate-800 rounded-[2rem] shadow-2xl w-[850px] max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 border border-white/20">
-                <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50"><h3 className="font-black text-base text-slate-800 dark:text-white flex items-center gap-2 uppercase tracking-tighter"><Smartphone className="text-primary-600" size={20}/> Nueva Recepción</h3><button onClick={() => setShowModal(false)} className="p-1.5 hover:bg-slate-200 rounded-full transition-colors"><X size={20}/></button></div>
-                <div className="flex-1 flex overflow-hidden">
-                    <div className="w-[55%] p-6 overflow-y-auto space-y-4 border-r border-slate-50">
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[999] flex items-end sm:items-center justify-center p-0 sm:p-4">
+            <div className="bg-white dark:bg-slate-800 rounded-t-[2.5rem] sm:rounded-[2rem] shadow-2xl w-full max-w-[850px] h-[95vh] sm:h-auto sm:max-h-[90vh] flex flex-col overflow-hidden animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-300 border border-white/20">
+                <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50 shrink-0">
+                    <h3 className="font-black text-sm sm:text-base text-slate-800 dark:text-white flex items-center gap-2 uppercase tracking-tighter"><Smartphone className="text-primary-600" size={20}/> Nueva Recepción</h3>
+                    <button onClick={() => setShowModal(false)} className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"><X size={20}/></button>
+                </div>
+                <div className="flex-1 flex flex-col lg:flex-row overflow-auto">
+                    <div className="w-full lg:w-[55%] p-6 space-y-4 border-b lg:border-b-0 lg:border-r border-slate-50 dark:border-slate-700">
                         <div className="space-y-1">
                             <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Cliente</label>
                             <div className="flex gap-2 relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14}/>
-                                <input type="text" className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl uppercase text-xs font-bold outline-none focus:border-primary-500" placeholder="NOMBRE O DNI..." value={newOrder.client} onChange={e => { const val = e.target.value.toUpperCase(); setNewOrder(prev => ({...prev, client: val})); const found = clients?.find(c => c.name === val || c.dni === val); if (found) setNewOrder(prev => ({...prev, client: found.name, clientPhone: found.phone})); }} list="serv-clients"/>
+                                <input type="text" className="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl uppercase text-xs font-bold outline-none focus:border-primary-500" placeholder="NOMBRE O DNI..." value={newOrder.client} onChange={e => { const val = e.target.value.toUpperCase(); setNewOrder(prev => ({...prev, client: val})); const found = clients?.find(c => c.name === val || c.dni === val); if (found) setNewOrder(prev => ({...prev, client: found.name, clientPhone: found.phone})); }} list="serv-clients"/>
                                 <datalist id="serv-clients">{clients?.map(c => <option key={c.id} value={c.name}>{c.dni}</option>)}</datalist>
                                 <button onClick={() => setShowClientModal(true)} className="p-2.5 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors shadow-sm"><UserPlus size={18}/></button>
                             </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-1"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Equipo</label><input type="text" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl uppercase text-xs font-bold outline-none" value={newOrder.deviceModel} onChange={e => setNewOrder(prev => ({...prev, deviceModel: e.target.value.toUpperCase()}))} /></div>
-                            <div className="space-y-1"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">WhatsApp</label><input type="text" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none" value={newOrder.clientPhone} onChange={e => setNewOrder(prev => ({...prev, clientPhone: e.target.value}))} /></div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="space-y-1"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Equipo</label><input type="text" className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl uppercase text-xs font-bold outline-none" value={newOrder.deviceModel} onChange={e => setNewOrder(prev => ({...prev, deviceModel: e.target.value.toUpperCase()}))} /></div>
+                            <div className="space-y-1"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">WhatsApp</label><input type="text" className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold outline-none" value={newOrder.clientPhone} onChange={e => setNewOrder(prev => ({...prev, clientPhone: e.target.value}))} /></div>
                         </div>
-                        <div className="space-y-1"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Descripción</label><textarea className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl h-20 resize-none uppercase text-xs font-medium outline-none" value={newOrder.issue} onChange={e => setNewOrder(prev => ({...prev, issue: e.target.value}))} placeholder="FALLA..."></textarea></div>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Descripción</label><textarea className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl h-20 resize-none uppercase text-xs font-medium outline-none" value={newOrder.issue} onChange={e => setNewOrder(prev => ({...prev, issue: e.target.value}))} placeholder="FALLA..."></textarea></div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="space-y-1">
                                 <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Técnico</label>
-                                <select className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-black uppercase text-violet-600 outline-none" value={newOrder.technician} onChange={e => setNewOrder(prev => ({...prev, technician: e.target.value}))}>
+                                <select className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase text-violet-600 outline-none" value={newOrder.technician} onChange={e => setNewOrder(prev => ({...prev, technician: e.target.value}))}>
                                     <option value="">-- ASIGNAR --</option><option value="Isaac Quille">Isaac Quille</option><option value="Kalyoscar Acosta">Kalyoscar Acosta</option><option value="Albertina Ortega">Albertina Ortega</option>
                                 </select>
                             </div>
                             <div className="space-y-1">
                                 <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Mano de Obra (S/)</label>
-                                <input 
-                                  type="number" 
-                                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-black text-sm text-primary-600 outline-none" 
-                                  value={laborInput} 
-                                  onChange={e => applyLaborChange(e.target.value)} 
-                                  placeholder="0.00"
-                                />
+                                <div className="flex gap-2">
+                                    <input 
+                                      type="number" 
+                                      onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                                      className="flex-1 p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-black text-sm text-primary-600 outline-none" 
+                                      value={laborInput} 
+                                      onChange={e => applyLaborChange(e.target.value)} 
+                                      placeholder="0.00"
+                                    />
+                                    <button 
+                                        onClick={handleAddLaborAsProduct}
+                                        title="Agregar a la lista como producto"
+                                        className="p-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all shadow-sm flex items-center justify-center"
+                                    >
+                                        <Plus size={18}/>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div className="w-[45%] bg-slate-50/50 p-6 flex flex-col">
+                    <div className="flex-1 bg-slate-50/50 dark:bg-slate-900/30 p-6 flex flex-col">
                         <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Repuestos / Suministros</label>
                         <div className="relative mb-3">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14}/>
-                            <input type="text" className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none" placeholder="Buscar en inventario..." value={productSearch} onChange={e => setProductSearch(e.target.value)} />
+                            <input type="text" className="w-full pl-9 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none" placeholder="Buscar en inventario..." value={productSearch} onChange={e => setProductSearch(e.target.value)} />
                             {productSearch.length > 0 && (
-                                <div className="absolute top-10 left-0 right-0 bg-white shadow-2xl rounded-xl z-[100] max-h-40 overflow-y-auto border border-slate-100 p-1">
-                                    {filteredProductsList.map(p => (<div key={p.id} onClick={() => { const current = newOrder.usedProducts || []; const exists = current.find(x => x.productId === p.id); if(exists) setNewOrder(prev => ({...prev, usedProducts: current.map(x => x.productId === p.id ? {...x, quantity: x.quantity + 1} : x)})); else setNewOrder(prev => ({...prev, usedProducts: [...current, {productId: p.id, productName: p.name, quantity: 1, price: p.price}]})); setProductSearch(''); }} className="p-2 hover:bg-primary-50 cursor-pointer rounded-lg flex justify-between items-center group"><span className="text-[10px] font-bold text-slate-700 uppercase">{p.name}</span><span className="text-[10px] font-black text-slate-900">S/ {p.price.toFixed(2)}</span></div>))}
+                                <div className="absolute top-10 left-0 right-0 bg-white dark:bg-slate-800 shadow-2xl rounded-xl z-[100] max-h-40 overflow-y-auto border border-slate-100 dark:border-slate-700 p-1">
+                                    {filteredProductsList.map(p => (<div key={p.id} onClick={() => { const current = newOrder.usedProducts || []; const exists = current.find(x => x.productId === p.id); if(exists) setNewOrder(prev => ({...prev, usedProducts: current.map(x => x.productId === p.id ? {...x, quantity: x.quantity + 1} : x)})); else setNewOrder(prev => ({...prev, usedProducts: [...current, {productId: p.id, productName: p.name, quantity: 1, price: p.price}]})); setProductSearch(''); }} className="p-2 hover:bg-primary-50 dark:hover:bg-primary-900/20 cursor-pointer rounded-lg flex justify-between items-center group"><span className="text-[10px] font-bold text-slate-700 dark:text-slate-200 uppercase">{p.name}</span><span className="text-[10px] font-black text-slate-900 dark:text-white">S/ {p.price.toFixed(2)}</span></div>))}
                                 </div>
                             )}
                         </div>
-                        <div className="flex-1 overflow-y-auto max-h-[220px] space-y-1.5 mb-4">
+                        <div className="flex-1 overflow-y-auto min-h-[150px] lg:max-h-[220px] space-y-1.5 mb-4">
                             {(newOrder.usedProducts || []).map((p, i) => (
-                                <div key={i} className="flex justify-between items-center bg-white p-2 rounded-xl border border-slate-100 shadow-sm group">
+                                <div key={i} className="flex justify-between items-center bg-white dark:bg-slate-800 p-2 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm group">
                                     <div className="flex-1">
-                                        <div className="font-bold text-[9px] text-slate-800 uppercase truncate">{p.productName}</div>
-                                        <div className="flex items-center gap-1 mt-0.5">
-                                            <span className="text-[9px] text-slate-400 font-bold">{p.quantity} x</span>
+                                        <div className="font-bold text-[9px] text-slate-800 dark:text-white uppercase truncate">{p.productName}</div>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <div className="flex items-center bg-slate-100 dark:bg-slate-700 rounded-lg p-0.5 border border-slate-200 dark:border-slate-600">
+                                                <button 
+                                                    onClick={() => updateProductQuantity(p.productId, -1)}
+                                                    className="p-1 hover:bg-white dark:hover:bg-slate-600 rounded-md text-slate-500 transition-all"
+                                                >
+                                                    <Minus size={10}/>
+                                                </button>
+                                                <span className="text-[10px] font-black px-2 text-slate-700 dark:text-white tabular-nums">{p.quantity}</span>
+                                                <button 
+                                                    onClick={() => updateProductQuantity(p.productId, 1)}
+                                                    className="p-1 hover:bg-white dark:hover:bg-slate-600 rounded-md text-slate-500 transition-all"
+                                                >
+                                                    <Plus size={10}/>
+                                                </button>
+                                            </div>
+                                            <span className="text-[9px] text-slate-400 font-bold">x</span>
                                             <button 
                                                 onClick={() => openPriceEdit(p)}
-                                                className="text-[10px] font-black text-primary-600 hover:bg-primary-50 px-1.5 py-0.5 rounded border border-primary-100 transition-all flex items-center gap-1"
+                                                className="text-[10px] font-black text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 px-1.5 py-0.5 rounded border border-primary-100 dark:border-primary-900 transition-all flex items-center gap-1"
                                             >
                                                 S/ {p.price.toFixed(2)} <Edit3 size={10}/>
                                             </button>
@@ -485,21 +748,49 @@ export const ServicesModule: React.FC<ServicesProps> = ({ services, products, ca
                                 </div>
                             ))}
                         </div>
-                        <div className="mt-auto bg-black text-white p-4 rounded-2xl shadow-xl border border-white/5">
+                        <div className="mt-auto bg-black dark:bg-slate-950 text-white p-4 rounded-2xl shadow-xl border border-white/5">
                             <div className="flex justify-between text-[9px] text-slate-400 mb-1 font-bold uppercase"><span>Subtotal:</span><span>S/ {(calculateOrderTotal(newOrder)).toFixed(2)}</span></div>
                             <div className="h-px bg-white/10 my-2"></div>
                             <div className="flex justify-between font-black text-xl tracking-tighter"><span>TOTAL:</span><span className="text-primary-400">S/ {calculateOrderTotal(newOrder).toFixed(2)}</span></div>
                         </div>
                     </div>
                 </div>
-                <div className="p-5 bg-slate-50 border-t border-slate-100 flex justify-end gap-3"><button onClick={() => setShowModal(false)} className="px-6 py-2 text-slate-500 font-bold hover:bg-slate-100 rounded-xl transition-all uppercase text-[10px]">Cerrar</button><button onClick={() => { if(!newOrder.client || !newOrder.deviceModel) return alert("Faltan datos"); onAddService({ id: Math.floor(Math.random()*100000).toString(), entryDate: newOrder.entryDate!, entryTime: newOrder.entryTime!, client: newOrder.client.toUpperCase(), clientPhone: newOrder.clientPhone, deviceModel: newOrder.deviceModel.toUpperCase(), issue: newOrder.issue || '', status: 'Pendiente', technician: newOrder.technician || 'POR ASIGNAR', receptionist: newOrder.receptionist || 'ADMIN', cost: Number(newOrder.cost), usedProducts: newOrder.usedProducts || [], color: '#ef4444' }); setShowModal(false); }} className="px-8 py-2 bg-primary-600 text-white font-black rounded-xl shadow-lg hover:bg-primary-700 transition-all uppercase tracking-widest text-[10px]">Guardar Orden</button></div>
+                <div className="p-5 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-3 shrink-0 sticky bottom-0 z-10">
+                    <button onClick={() => setShowModal(false)} className="px-6 py-2 text-slate-500 font-bold hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all uppercase text-[10px] hidden sm:block">Cerrar</button>
+                    <button onClick={() => { 
+                        if(!newOrder.client || !newOrder.deviceModel) return alert("Faltan datos"); 
+                        const serviceData: ServiceOrder = { 
+                            id: isEditMode ? newOrder.id! : Math.floor(Math.random()*100000).toString(), 
+                            entryDate: newOrder.entryDate!, 
+                            entryTime: newOrder.entryTime!, 
+                            client: newOrder.client.toUpperCase(), 
+                            clientPhone: newOrder.clientPhone || '', 
+                            deviceModel: newOrder.deviceModel.toUpperCase(), 
+                            issue: newOrder.issue || '', 
+                            status: newOrder.status || 'Pendiente', 
+                            technician: newOrder.technician || 'POR ASIGNAR', 
+                            receptionist: newOrder.receptionist || 'ADMIN', 
+                            cost: newOrder.cost || 0, 
+                            usedProducts: newOrder.usedProducts || [], 
+                            color: newOrder.color || '#ef4444' 
+                        };
+                        if (isEditMode && onUpdateService) {
+                            onUpdateService(serviceData);
+                        } else {
+                            onAddService(serviceData);
+                        }
+                        setShowModal(false); 
+                    }} className="flex-1 sm:flex-none px-8 py-4 sm:py-2 bg-primary-600 text-white font-black rounded-xl shadow-lg hover:bg-primary-700 transition-all uppercase tracking-widest text-[11px] sm:text-[10px]">
+                        {isEditMode ? 'Actualizar Orden' : 'Guardar Orden'}
+                    </button>
+                </div>
             </div>
         </div>
        )}
 
        {showTicket && ticketData && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[1000] flex items-center justify-center p-4">
-            <div className="bg-zinc-100 p-2 shadow-2xl rounded-lg animate-in fade-in zoom-in-95">
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[1000] flex items-center justify-center p-4">
+            <div className="bg-zinc-100 p-2 shadow-2xl rounded-lg animate-in fade-in zoom-in-95 max-w-full overflow-auto">
                 <div className="bg-white w-[280px] p-6 shadow-sm font-mono text-[10px] text-slate-800 relative">
                     <div className="text-center mb-4 pb-2 border-b-2 border-dashed border-slate-200">
                         <h2 className="font-bold text-xs uppercase tracking-tighter">SapiSoft ERP</h2>
@@ -560,13 +851,19 @@ export const ServicesModule: React.FC<ServicesProps> = ({ services, products, ca
        )}
 
        {showClientModal && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[1000] flex items-center justify-center p-4">
-           <div className="bg-white dark:bg-slate-800 rounded-[2rem] shadow-2xl w-full max-w-3xl border border-white/20 animate-in zoom-in-95 duration-300 overflow-hidden">
-               <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50"><h3 className="font-black text-base text-slate-800 dark:text-white flex items-center gap-3 uppercase tracking-tighter"><UserPlus className="text-primary-600" size={20}/> Nuevo Cliente</h3><button onClick={() => setShowClientModal(false)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"><X size={20}/></button></div>
-               <div className="p-8 space-y-6">
-                    <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Nombre Completo</label><input type="text" className="w-full p-3.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl font-bold uppercase outline-none focus:border-primary-500 shadow-sm text-sm" value={newClientData.name} onChange={e => setNewClientData({...newClientData, name: e.target.value})} placeholder="EJ. JUAN PÉREZ" autoFocus /></div>
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[1000] flex items-end sm:items-center justify-center p-0 sm:p-4">
+           <div className="bg-white dark:bg-slate-800 rounded-t-[2.5rem] sm:rounded-[2rem] shadow-2xl w-full max-w-3xl border border-white/20 animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-300 overflow-hidden flex flex-col">
+               <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50 shrink-0">
+                   <h3 className="font-black text-sm sm:text-base text-slate-800 dark:text-white flex items-center gap-3 uppercase tracking-tighter"><UserPlus className="text-primary-600" size={20}/> Nuevo Cliente</h3>
+                   <button onClick={() => setShowClientModal(false)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"><X size={20}/></button>
+               </div>
+               <div className="p-6 sm:p-8 space-y-6 overflow-auto">
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Nombre Completo</label>
+                        <input type="text" className="w-full p-3.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl font-bold uppercase outline-none focus:border-primary-500 shadow-sm text-sm" value={newClientData.name} onChange={e => setNewClientData({...newClientData, name: e.target.value})} placeholder="EJ. JUAN PÉREZ" autoFocus />
+                    </div>
                     
-                    <div className="grid grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div className="space-y-1">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">DNI / RUC</label>
                             <div className="relative">
@@ -587,23 +884,29 @@ export const ServicesModule: React.FC<ServicesProps> = ({ services, products, ca
                                 </button>
                             </div>
                         </div>
-                        <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Teléfono</label><input type="text" className="w-full p-3.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl font-bold outline-none focus:border-primary-500 text-sm" value={newClientData.phone} onChange={e => setNewClientData({...newClientData, phone: e.target.value})} placeholder="999 999 999" /></div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Teléfono</label>
+                            <input type="text" className="w-full p-3.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl font-bold outline-none focus:border-primary-500 text-sm" value={newClientData.phone} onChange={e => setNewClientData({...newClientData, phone: e.target.value})} placeholder="999 999 999" />
+                        </div>
                     </div>
                     
-                    <div className="flex justify-end gap-4 pt-4"><button onClick={() => setShowClientModal(false)} className="px-10 py-4 text-slate-500 font-bold hover:bg-slate-100 rounded-2xl transition-all uppercase tracking-widest text-xs">Cancelar</button><button onClick={() => { if (!newClientData.name || !newClientData.dni) return alert("Nombre y DNI obligatorios."); const cl: Client = { id: Date.now().toString(), name: newClientData.name.toUpperCase(), dni: newClientData.dni, phone: newClientData.phone, creditLine: 0, creditUsed: 0, totalPurchases: 0, paymentScore: 3, digitalBalance: 0 }; if (onAddClient) onAddClient(cl); setNewOrder(prev => ({...prev, client: cl.name, clientPhone: cl.phone})); setShowClientModal(false); }} className="px-12 py-4 bg-primary-600 text-white font-black rounded-2xl hover:bg-primary-700 shadow-xl transition-all text-xs uppercase tracking-widest">Guardar y Vincular</button></div>
-               </div>
-           </div>
+                    <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
+                        <button onClick={() => setShowClientModal(false)} className="px-10 py-4 sm:py-3 text-slate-500 font-bold hover:bg-slate-100 dark:hover:bg-slate-800 rounded-2xl transition-all uppercase tracking-widest text-xs">Cancelar</button>
+                        <button onClick={() => { if (!newClientData.name || !newClientData.dni) return alert("Nombre y DNI obligatorios."); const cl: Client = { id: Date.now().toString(), name: newClientData.name.toUpperCase(), dni: newClientData.dni, phone: newClientData.phone, creditLine: 0, creditUsed: 0, totalPurchases: 0, paymentScore: 3, digitalBalance: 0 }; if (onAddClient) onAddClient(cl); setNewOrder(prev => ({...prev, client: cl.name, clientPhone: cl.phone})); setShowClientModal(false); }} className="px-12 py-4 sm:py-3 bg-primary-600 text-white font-black rounded-2xl hover:bg-primary-700 shadow-xl transition-all text-xs uppercase tracking-widest">Guardar y Vincular</button>
+                    </div>
+                </div>
+            </div>
         </div>
-      )}
+       )}
 
-      {priceEditingProduct && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[1100] flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-[350px] p-6 animate-in zoom-in-95 border border-white/20">
+       {priceEditingProduct && (
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[1100] flex items-end sm:items-center justify-center p-0 sm:p-4">
+            <div className="bg-white dark:bg-slate-800 rounded-t-[2.5rem] sm:rounded-3xl shadow-2xl w-full max-w-[350px] p-6 animate-in slide-in-from-bottom-10 sm:zoom-in-95 border border-white/20">
                 <div className="flex justify-between items-center mb-6">
                     <h3 className="font-black text-sm uppercase tracking-tighter flex items-center gap-2">
                         <Edit3 size={18} className="text-primary-600"/> Editar Precio
                     </h3>
-                    <button onClick={() => { setPriceEditingProduct(null); setIsAuthorized(false); }} className="p-1 hover:bg-slate-100 rounded-full"><X size={18}/></button>
+                    <button onClick={() => { setPriceEditingProduct(null); setIsAuthorized(false); }} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors"><X size={18}/></button>
                 </div>
                 <div className="space-y-4">
                     <div>
@@ -615,6 +918,7 @@ export const ServicesModule: React.FC<ServicesProps> = ({ services, products, ca
                         <input 
                             type="number" 
                             autoFocus
+                            onWheel={(e) => (e.target as HTMLInputElement).blur()}
                             className="w-full p-4 bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-700 rounded-2xl text-3xl font-black text-slate-800 dark:text-white outline-none focus:border-primary-500 shadow-inner"
                             value={tempPriceInput}
                             onChange={e => setTempPriceInput(e.target.value)}
@@ -624,11 +928,11 @@ export const ServicesModule: React.FC<ServicesProps> = ({ services, products, ca
                 </div>
             </div>
         </div>
-      )}
+       )}
 
-      {showAuthModal && (
+       {showAuthModal && (
         <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-[1200] flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-[350px] p-8 border border-white/20 animate-in zoom-in-95">
+            <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-2xl w-full max-w-[350px] p-8 border border-white/20 animate-in zoom-in-95">
                 <div className="text-center space-y-4">
                     <div className="w-16 h-16 bg-red-50 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto text-red-600">
                         <Lock size={32}/>
@@ -647,13 +951,13 @@ export const ServicesModule: React.FC<ServicesProps> = ({ services, products, ca
                         placeholder="****"
                     />
                     <div className="flex gap-3">
-                        <button onClick={() => { setShowAuthModal(false); setAuthPassword(''); }} className="flex-1 py-3 text-slate-500 font-bold uppercase text-[10px]">Cancelar</button>
-                        <button onClick={handleAuthorize} className="flex-1 py-3 bg-slate-900 text-white font-black rounded-xl uppercase text-[10px] tracking-widest shadow-lg">Validar</button>
+                        <button onClick={() => { setShowAuthModal(false); setAuthPassword(''); }} className="flex-1 py-3 text-slate-500 font-bold uppercase text-[10px] hover:bg-slate-100 dark:hover:bg-slate-900 rounded-xl transition-colors">Cancelar</button>
+                        <button onClick={handleAuthorize} className="flex-1 py-3 bg-slate-900 dark:bg-slate-700 text-white font-black rounded-xl uppercase text-[10px] tracking-widest shadow-lg active:scale-95 transition-all">Validar</button>
                     </div>
                 </div>
             </div>
         </div>
-      )}
+       )}
     </div>
   );
 };

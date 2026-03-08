@@ -99,7 +99,7 @@ const SalesReportModule: React.FC<{ salesHistory: SaleRecord[] }> = ({ salesHist
                                     <tr key={sale.id} className="border-b border-slate-100 dark:border-slate-700 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700/50">
                                         <td className="p-3">
                                             <div className="font-bold text-slate-600 dark:text-slate-200">{sale.clientName}</div>
-                                            <div className="text-slate-400 font-mono">#{sale.id} - {sale.date}</div>
+                                            <div className="text-slate-400 font-mono">{sale.docType} #{sale.id} - {sale.date}</div>
                                         </td>
                                         <td className="p-3 text-right">
                                             <div className="font-bold text-primary-600 dark:text-primary-400">S/ {sale.total.toFixed(2)}</div>

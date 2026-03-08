@@ -106,8 +106,9 @@ const ProfitReportModule: React.FC<{ salesHistory: SaleRecord[], cashMovements: 
         setIsAnalyzing(true);
         setAiInsight(null);
         try {
-            // FIX: Initialize GoogleGenAI with named parameter using process.env.API_KEY
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            // FIX: Initialize GoogleGenAI with named parameter using custom key or process.env.API_KEY
+            const apiKey = localStorage.getItem('sapi_ai_google_key') || localStorage.getItem('sapi_ai_apikey') || process.env.API_KEY;
+            const ai = new GoogleGenAI({ apiKey: apiKey });
 
             const prompt = `Analiza estos datos financieros de mi negocio:
             - Ventas Totales: S/ ${profitData.totalSales.toFixed(2)}
@@ -128,7 +129,7 @@ const ProfitReportModule: React.FC<{ salesHistory: SaleRecord[], cashMovements: 
             setAiInsight(response.text || "No se pudo generar un análisis.");
         } catch (error: any) {
             console.error("Error IA:", error);
-             const isRateLimit = error.message?.includes('429') || error.status === 429;
+            const isRateLimit = error.message?.includes('429') || error.status === 429 || error.message?.includes('Rate exceeded');
             if (isRateLimit) {
                  setAiInsight("⚠️ Límite de cuota excedido. Ve al Asistente IA para conectar una cuenta de pago.");
             } else {

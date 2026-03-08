@@ -72,25 +72,25 @@ export const GatewayConfigModule: React.FC = () => {
                     { id: 'paddle', label: 'Paddle MoR Proxy', data: monitors.paddle, icon: Globe },
                     { id: 'payme', label: 'PayMe Alif API', data: monitors.payme, icon: Landmark }
                 ].map(m => (
-                    <div key={m.id} className="bg-slate-900 text-white p-4 rounded-[1.8rem] shadow-xl border border-white/10 relative overflow-hidden flex flex-col justify-between group">
-                        <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity"><m.icon size={50}/></div>
+                    <div key={m.id} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white p-4 rounded-[1.8rem] shadow-sm dark:shadow-xl border border-slate-100 dark:border-white/10 relative overflow-hidden flex flex-col justify-between group">
+                        <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity"><m.icon size={50} className="text-slate-900 dark:text-white"/></div>
                         <div className="relative z-10 flex justify-between items-start">
                             <div>
-                                <h4 className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">{m.label}</h4>
+                                <h4 className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">{m.label}</h4>
                                 <div className="flex items-center gap-2 mt-1.5">
-                                    <div className={`w-2 h-2 rounded-full ${m.data.heartbeat ? 'bg-emerald-400 shadow-[0_0_10px_#10b981]' : 'bg-red-50'}`}></div>
-                                    <span className={`text-[10px] font-black uppercase ${m.data.heartbeat ? 'text-emerald-400' : 'text-red-400'}`}>{m.data.status}</span>
+                                    <div className={`w-2 h-2 rounded-full ${m.data.heartbeat ? 'bg-emerald-500 shadow-[0_0_10px_#10b981]' : 'bg-red-500'}`}></div>
+                                    <span className={`text-[10px] font-black uppercase ${m.data.heartbeat ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{m.data.status}</span>
                                 </div>
                             </div>
                             <div className="text-right">
-                                <span className="text-[8px] font-black uppercase text-white/40 block">LATENCIA</span>
-                                <span className="text-[11px] font-mono text-white/90">{m.data.latency}</span>
+                                <span className="text-[8px] font-black uppercase text-slate-400 dark:text-white/40 block">LATENCIA</span>
+                                <span className="text-[11px] font-mono text-slate-700 dark:text-white/90">{m.data.latency}</span>
                             </div>
                         </div>
                         {m.id === 'helio' && (
-                            <div className="mt-3 relative z-10 flex justify-between items-end border-t border-white/5 pt-2">
-                                <span className="text-[8px] font-black text-slate-500 uppercase">SOLANA_HEIGHT</span>
-                                <span className="text-[10px] font-mono text-purple-400">{m.data.block}</span>
+                            <div className="mt-3 relative z-10 flex justify-between items-end border-t border-slate-50 dark:border-white/5 pt-2">
+                                <span className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase">SOLANA_HEIGHT</span>
+                                <span className="text-[10px] font-mono text-purple-600 dark:text-purple-400">{m.data.block}</span>
                             </div>
                         )}
                     </div>
@@ -143,17 +143,17 @@ export const GatewayConfigModule: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="flex-1 bg-black rounded-[2.2rem] border border-slate-800 shadow-2xl flex flex-col overflow-hidden">
-                    <div className="p-5 border-b border-slate-800 bg-slate-900/50 flex justify-between items-center">
+                <div className="flex-1 bg-white dark:bg-black rounded-[2.2rem] border border-slate-200 dark:border-slate-800 shadow-sm dark:shadow-2xl flex flex-col overflow-hidden">
+                    <div className="p-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex justify-between items-center">
                         <div className="flex items-center gap-3">
                             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Terminal size={14} className="text-emerald-500"/> Webhook Live Monitor</h3>
+                            <h3 className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-2"><Terminal size={14} className="text-emerald-600 dark:text-emerald-500"/> Webhook Live Monitor</h3>
                         </div>
-                        <button onClick={() => setWebhookLogs([])} className="text-[9px] font-black text-slate-500 hover:text-slate-300 uppercase flex items-center gap-1.5"><RotateCcw size={12}/> Clear</button>
+                        <button onClick={() => setWebhookLogs([])} className="text-[9px] font-black text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 uppercase flex items-center gap-1.5"><RotateCcw size={12}/> Clear</button>
                     </div>
                     <div className="flex-1 overflow-y-auto p-4 font-mono no-scrollbar">
                         {webhookLogs.length === 0 ? (
-                            <div className="h-full flex flex-col items-center justify-center opacity-20 text-emerald-500 text-center p-10">
+                            <div className="h-full flex flex-col items-center justify-center opacity-20 text-emerald-600 dark:text-emerald-500 text-center p-10">
                                 <ActivityIcon size={40} className="mb-4 animate-pulse"/>
                                 <span className="text-[10px] uppercase font-black tracking-[0.3em]">Listening for cloud events...</span>
                             </div>
@@ -162,11 +162,11 @@ export const GatewayConfigModule: React.FC = () => {
                                 {webhookLogs.map(log => (
                                     <div key={log.id} className="text-[9px] animate-in slide-in-from-left-2">
                                         <div className="flex items-center gap-2">
-                                            <span className="text-slate-600">[{log.time}]</span>
-                                            <span className={`px-1.5 py-0.5 rounded text-[8px] font-black ${log.status === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>{log.status}</span>
-                                            <span className="text-primary-400 font-bold">{log.gateway}</span>
+                                            <span className="text-slate-400 dark:text-slate-600">[{log.time}]</span>
+                                            <span className={`px-1.5 py-0.5 rounded text-[8px] font-black ${log.status === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/10 text-red-600 dark:text-red-400'}`}>{log.status}</span>
+                                            <span className="text-primary-600 dark:text-primary-400 font-bold">{log.gateway}</span>
                                         </div>
-                                        <div className="mt-1 pl-4 border-l border-slate-800 text-slate-300">→ Event: <span className="text-amber-400">{log.event}</span></div>
+                                        <div className="mt-1 pl-4 border-l border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-300">→ Event: <span className="text-amber-600 dark:text-amber-400">{log.event}</span></div>
                                     </div>
                                 ))}
                             </div>

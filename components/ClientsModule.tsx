@@ -105,19 +105,19 @@ export const ClientsModule: React.FC<ClientsModuleProps> = ({
 
   return (
     <div className="flex flex-col gap-4 h-full animate-in fade-in duration-500">
-        <div className="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
-            <div className="flex items-center gap-4 flex-1">
-                <div className="relative max-w-md w-full">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+            <div className="flex flex-col md:flex-row md:items-center gap-4 flex-1">
+                <div className="relative w-full md:max-w-md">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18}/>
                     <input 
                         type="text" 
                         placeholder="Nombre, DNI o Teléfono..." 
-                        className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary-500/20"
+                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary-500/20"
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
                     />
                 </div>
-                <div className="hidden md:flex gap-4 border-l pl-4 border-slate-200 dark:border-slate-700">
+                <div className="flex gap-6 md:gap-4 border-t md:border-t-0 md:border-l pt-3 md:pt-0 md:pl-4 border-slate-100 dark:border-slate-700">
                     <div className="flex flex-col">
                         <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total Clientes</span>
                         <span className="text-sm font-bold text-slate-700 dark:text-white">{clients.length}</span>
@@ -130,7 +130,7 @@ export const ClientsModule: React.FC<ClientsModuleProps> = ({
             </div>
             <button 
                 onClick={() => setShowModal(true)}
-                className="bg-primary-600 text-white px-4 py-2 rounded-xl text-xs font-black hover:bg-primary-700 shadow-lg shadow-primary-200 flex items-center gap-2 transition-all active:scale-95"
+                className="w-full md:w-auto bg-primary-600 text-white px-6 py-3 md:py-2 rounded-xl text-xs font-black hover:bg-primary-700 shadow-lg shadow-primary-200 flex items-center justify-center gap-2 transition-all active:scale-95"
             >
                 <UserPlus size={16}/> NUEVO CLIENTE
             </button>
@@ -138,7 +138,8 @@ export const ClientsModule: React.FC<ClientsModuleProps> = ({
 
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex-1 flex flex-col">
             <div className="overflow-auto flex-1">
-                <table className="w-full text-left">
+                {/* Desktop Table */}
+                <table className="hidden md:table w-full text-left">
                     <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-700 text-slate-400 font-black uppercase tracking-widest text-[10px] border-b">
                         <tr>
                             <th className="px-6 py-4">Cliente / Identificación</th>
@@ -201,28 +202,79 @@ export const ClientsModule: React.FC<ClientsModuleProps> = ({
                         ))}
                     </tbody>
                 </table>
+
+                {/* Mobile Card List */}
+                <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-700">
+                    {filteredClients.map(client => (
+                        <div key={client.id} className="p-4 space-y-4">
+                            <div className="flex justify-between items-start">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center font-black text-xs shrink-0">
+                                        {client.name.substring(0,2).toUpperCase()}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <div className="font-black text-slate-800 dark:text-white text-xs uppercase truncate">{client.name}</div>
+                                        <div className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
+                                            <FileText size={10}/> DNI: {client.dni}
+                                        </div>
+                                    </div>
+                                </div>
+                                <button 
+                                    onClick={() => onOpenWhatsApp && client.phone ? onOpenWhatsApp(client.name, client.phone) : alert('Sin teléfono')} 
+                                    className="p-2.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 rounded-xl transition-all active:scale-90 border border-emerald-100 dark:border-emerald-800"
+                                >
+                                    <MessageCircle size={18}/>
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-50 dark:border-slate-700/50">
+                                <div>
+                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Contacto</p>
+                                    <p className="text-[10px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mt-1">
+                                        <Phone size={10} className="text-slate-400"/> {client.phone || 'N/A'}
+                                    </p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Total Compras</p>
+                                    <p className="text-[10px] font-black text-slate-800 dark:text-white mt-1">S/ {client.totalPurchases.toFixed(2)}</p>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-xl">
+                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Estado de Cuenta</span>
+                                {client.creditUsed > 0 ? (
+                                    <span className="text-[10px] font-black text-red-600 uppercase">
+                                        DEUDA: S/ {client.creditUsed.toFixed(2)}
+                                    </span>
+                                ) : (
+                                    <span className="text-[10px] font-black text-emerald-500 uppercase">Al día</span>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
         </div>
 
         {showModal && (
-            <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[1000] flex items-center justify-center p-4">
-                <div className="bg-white dark:bg-slate-800 rounded-[2rem] shadow-2xl w-full max-w-3xl border border-white/20 animate-in zoom-in-95 duration-300 overflow-hidden">
-                    <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50">
-                        <h3 className="font-black text-base text-slate-800 dark:text-white flex items-center gap-3 uppercase tracking-tighter"><UserPlus className="text-primary-600" size={20}/> Nuevo Cliente</h3>
+            <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[1000] flex items-center justify-center p-0 md:p-4">
+                <div className="bg-white dark:bg-slate-800 rounded-none md:rounded-[2rem] shadow-2xl w-full max-w-3xl h-full md:h-auto border border-white/20 animate-in zoom-in-95 duration-300 overflow-hidden flex flex-col">
+                    <div className="p-4 md:p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50">
+                        <h3 className="font-black text-sm md:text-base text-slate-800 dark:text-white flex items-center gap-3 uppercase tracking-tighter"><UserPlus className="text-primary-600" size={20}/> Nuevo Cliente</h3>
                         <button onClick={handleCloseModal} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"><X size={20}/></button>
                     </div>
-                    <div className="p-8 space-y-6 overflow-y-auto max-h-[80vh]">
+                    <div className="flex-1 p-4 md:p-8 space-y-4 md:space-y-6 overflow-y-auto">
                         <div className="space-y-1">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Nombre Completo / Razón Social</label>
-                            <input type="text" className="w-full p-3.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl font-bold uppercase outline-none focus:border-primary-500 shadow-sm text-sm" value={newClientData.name} onChange={e => setNewClientData({...newClientData, name: e.target.value})} placeholder="EJ. JUAN PÉREZ" autoFocus />
+                            <label className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest block">Nombre Completo / Razón Social</label>
+                            <input type="text" className="w-full p-3 md:p-3.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl font-bold uppercase outline-none focus:border-primary-500 shadow-sm text-sm" value={newClientData.name} onChange={e => setNewClientData({...newClientData, name: e.target.value})} placeholder="EJ. JUAN PÉREZ" autoFocus />
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
                             <div className="space-y-1">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">DNI / RUC</label>
+                                <label className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest block">DNI / RUC</label>
                                 <div className="relative">
                                     <input 
                                         type="text" 
-                                        className="w-full p-3.5 pr-12 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl font-bold outline-none focus:border-primary-500 text-sm" 
+                                        className="w-full p-3 md:p-3.5 pr-12 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl font-bold outline-none focus:border-primary-500 text-sm" 
                                         value={newClientData.dni} 
                                         onChange={e => setNewClientData({...newClientData, dni: e.target.value})} 
                                         placeholder="00000000" 
@@ -238,38 +290,38 @@ export const ClientsModule: React.FC<ClientsModuleProps> = ({
                                 </div>
                             </div>
                             <div className="space-y-1">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Teléfono / Celular</label>
-                                <input type="text" className="w-full p-3.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl font-bold outline-none focus:border-primary-500 text-sm" value={newClientData.phone} onChange={e => setNewClientData({...newClientData, phone: e.target.value})} placeholder="999 999 999" />
+                                <label className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest block">Teléfono / Celular</label>
+                                <input type="text" className="w-full p-3 md:p-3.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl font-bold outline-none focus:border-primary-500 text-sm" value={newClientData.phone} onChange={e => setNewClientData({...newClientData, phone: e.target.value})} placeholder="999 999 999" />
                             </div>
                         </div>
                         <div className="space-y-1">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Dirección</label>
-                            <input type="text" className="w-full p-3.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl font-bold uppercase outline-none focus:border-primary-500 text-sm" value={newClientData.address} onChange={e => setNewClientData({...newClientData, address: e.target.value})} placeholder="AV. EL SOL 500" />
+                            <label className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest block">Dirección</label>
+                            <input type="text" className="w-full p-3 md:p-3.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl font-bold uppercase outline-none focus:border-primary-500 text-sm" value={newClientData.address} onChange={e => setNewClientData({...newClientData, address: e.target.value})} placeholder="AV. EL SOL 500" />
                         </div>
-                        <div className="grid grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div className="space-y-1">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Departamento</label>
-                                <select className="w-full p-3.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl font-bold text-sm outline-none" value={newClientData.department} onChange={e => setNewClientData({...newClientData, department: e.target.value})}>
+                                <label className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest block">Departamento</label>
+                                <select className="w-full p-3 md:p-3.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl font-bold text-sm outline-none" value={newClientData.department} onChange={e => setNewClientData({...newClientData, department: e.target.value})}>
                                     {departments.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
                                 </select>
                             </div>
                             <div className="space-y-1">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Provincia</label>
-                                <select className="w-full p-3.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl font-bold text-sm outline-none" value={newClientData.province} onChange={e => setNewClientData({...newClientData, province: e.target.value})}>
+                                <label className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest block">Provincia</label>
+                                <select className="w-full p-3 md:p-3.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl font-bold text-sm outline-none" value={newClientData.province} onChange={e => setNewClientData({...newClientData, province: e.target.value})}>
                                     {provinces.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
                                 </select>
                             </div>
                             <div className="space-y-1">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Distrito</label>
-                                <select className="w-full p-3.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl font-bold text-sm outline-none" value={newClientData.district} onChange={e => setNewClientData({...newClientData, district: e.target.value})}>
+                                <label className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest block">Distrito</label>
+                                <select className="w-full p-3 md:p-3.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl font-bold text-sm outline-none" value={newClientData.district} onChange={e => setNewClientData({...newClientData, district: e.target.value})}>
                                     <option value="">-- SELECCIONAR --</option>
                                     {districts.map(dist => <option key={dist.id} value={dist.name}>{dist.name}</option>)}
                                 </select>
                             </div>
                         </div>
-                        <div className="flex justify-end gap-4 pt-4">
-                            <button onClick={handleCloseModal} className="px-10 py-4 text-slate-500 font-bold hover:bg-slate-100 rounded-2xl transition-all uppercase tracking-widest text-xs">Cancelar</button>
-                            <button onClick={handleSave} className="px-12 py-4 bg-primary-600 text-white font-black rounded-2xl hover:bg-primary-700 shadow-xl transition-all text-xs uppercase tracking-widest">Guardar Cliente</button>
+                        <div className="flex flex-col md:flex-row justify-end gap-3 md:gap-4 pt-4">
+                            <button onClick={handleCloseModal} className="w-full md:w-auto px-10 py-4 text-slate-500 font-bold hover:bg-slate-100 rounded-2xl transition-all uppercase tracking-widest text-xs">Cancelar</button>
+                            <button onClick={handleSave} className="w-full md:w-auto px-12 py-4 bg-primary-600 text-white font-black rounded-2xl hover:bg-primary-700 shadow-xl transition-all text-xs uppercase tracking-widest">Guardar Cliente</button>
                         </div>
                     </div>
                 </div>

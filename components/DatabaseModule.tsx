@@ -118,7 +118,7 @@ const DatabaseModule: React.FC<DatabaseModuleProps> = ({ isSyncEnabled, data, on
             </div>
             <div className="flex-1 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 flex flex-col">
                 <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-4">Estado de Sincronización</h2>
-                <div className="flex-1 bg-slate-900 rounded-xl p-4 overflow-y-auto font-mono text-xs text-green-400 shadow-inner">
+                <div className="flex-1 bg-slate-50 dark:bg-slate-900 rounded-xl p-4 overflow-y-auto font-mono text-xs text-slate-600 dark:text-green-400 shadow-inner border border-slate-100 dark:border-transparent">
                     {logs.length === 0 ? <span className="opacity-50">// Esperando acciones...</span> : logs.map((l, i) => <div key={i} className="mb-1">{l}</div>)}
                 </div>
                 <div className="mt-4 flex gap-4">

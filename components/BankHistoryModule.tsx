@@ -192,8 +192,49 @@ const BankHistoryModule: React.FC<BankHistoryProps> = ({ cashMovements, bankAcco
                     )}
                 </div>
 
-                {/* TABLA DE MOVIMIENTOS */}
-                <div className="flex-1 bg-white dark:bg-slate-800 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
+                {/* VISTA MOVIL (TARJETAS) */}
+                <div className="block md:hidden flex-1 overflow-y-auto space-y-3 p-1 min-h-0">
+                    {filteredMovements.length === 0 ? (
+                        <div className="text-center p-8 text-slate-400 flex flex-col items-center gap-3">
+                            <Search size={32} strokeWidth={1.5}/>
+                            <span className="text-xs font-bold uppercase tracking-widest">Sin movimientos</span>
+                        </div>
+                    ) : (
+                        filteredMovements.map(m => (
+                            <div key={m.id} onClick={() => setSelectedMovement(m)} className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm active:scale-[0.98] transition-transform">
+                                <div className="flex justify-between items-start mb-2">
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{m.date}</span>
+                                        <span className="text-[9px] font-bold text-slate-300">{m.time}</span>
+                                    </div>
+                                    <div className={`text-sm font-black ${m.type === 'Ingreso' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
+                                        {m.type === 'Ingreso' ? '+' : '-'} S/ {m.amount.toFixed(2)}
+                                    </div>
+                                </div>
+                                
+                                <div className="font-bold text-slate-700 dark:text-slate-200 text-xs uppercase mb-3 line-clamp-2">
+                                    {m.concept}
+                                </div>
+                                
+                                <div className="flex items-center justify-between pt-3 border-t border-slate-50 dark:border-slate-700/50">
+                                    <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${m.type === 'Ingreso' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+                                        {m.type}
+                                    </span>
+                                    
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-1 text-[10px] font-bold text-slate-500 uppercase">
+                                            {getMethodIcon(m.paymentMethod)}
+                                            <span>{m.paymentMethod}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+
+                {/* VISTA ESCRITORIO (TABLA) */}
+                <div className="hidden md:block flex-1 bg-white dark:bg-slate-800 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
                     <div className="h-full overflow-auto">
                     <table className="w-full modern-table text-sm">
                         <thead>

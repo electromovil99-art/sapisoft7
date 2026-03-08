@@ -77,8 +77,8 @@ export const SuppliersModule: React.FC<SuppliersModuleProps> = ({ suppliers, onA
                 </button>
             </div>
 
-            <div className="flex-1 flex gap-4 min-h-0">
-                <div className="w-full lg:w-2/5 flex flex-col gap-2 overflow-y-auto pr-1 custom-scrollbar">
+            <div className="flex-1 flex flex-col lg:flex-row gap-4 min-h-0 overflow-hidden">
+                <div className={`w-full lg:w-2/5 flex flex-col gap-2 overflow-y-auto pr-1 custom-scrollbar ${selectedSupplier ? 'hidden lg:flex' : 'flex'}`}>
                     {filteredSuppliers.length === 0 ? (
                         <div className="h-full flex flex-col items-center justify-center bg-white dark:bg-slate-800 rounded-[2.5rem] border border-dashed border-slate-200 dark:border-slate-700 text-slate-300 p-10">
                             <Truck size={64} strokeWidth={1} className="mb-4 opacity-20"/>
@@ -116,29 +116,33 @@ export const SuppliersModule: React.FC<SuppliersModuleProps> = ({ suppliers, onA
                     ))}
                 </div>
 
-                <div className="flex-1 bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden transition-colors">
+                <div className={`flex-1 bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden transition-colors ${!selectedSupplier ? 'hidden lg:flex' : 'flex'}`}>
                     {selectedSupplier ? (
                         <div className="flex flex-col h-full">
-                            <div className="p-8 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 flex justify-between items-start">
-                                <div className="flex gap-5">
-                                    <div className="w-16 h-16 rounded-[1.5rem] bg-orange-600 text-white flex items-center justify-center shadow-xl shadow-orange-600/20">
-                                        <Building2 size={32}/>
+                            <div className="p-6 lg:p-8 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 flex justify-between items-start">
+                                <div className="flex gap-4 lg:gap-5">
+                                    <button onClick={() => setSelectedSupplier(null)} className="lg:hidden p-2 bg-white dark:bg-slate-700 rounded-xl shadow-sm border border-slate-200 dark:border-slate-600 text-slate-500">
+                                        <X size={20}/>
+                                    </button>
+                                    <div className="hidden sm:flex w-12 h-12 lg:w-16 lg:h-16 rounded-[1.2rem] lg:rounded-[1.5rem] bg-orange-600 text-white items-center justify-center shadow-xl shadow-orange-600/20">
+                                        <Building2 size={24} className="lg:hidden"/>
+                                        <Building2 size={32} className="hidden lg:block"/>
                                     </div>
-                                    <div>
-                                        <h2 className="text-2xl font-black text-slate-800 dark:text-white uppercase leading-none tracking-tighter">{selectedSupplier.name}</h2>
-                                        <p className="text-slate-400 font-bold text-xs mt-2 flex items-center gap-2">
-                                            RUC {selectedSupplier.ruc} <span className="w-1 h-1 rounded-full bg-slate-300"></span> 
-                                            {selectedSupplier.contactName && `Contacto: ${selectedSupplier.contactName}`}
+                                    <div className="min-w-0">
+                                        <h2 className="text-lg lg:text-2xl font-black text-slate-800 dark:text-white uppercase leading-none tracking-tighter truncate max-w-[200px] sm:max-w-none">{selectedSupplier.name}</h2>
+                                        <p className="text-slate-400 font-bold text-[10px] lg:text-xs mt-2 flex items-center gap-2">
+                                            RUC {selectedSupplier.ruc} <span className="hidden sm:inline w-1 h-1 rounded-full bg-slate-300"></span> 
+                                            <span className="hidden sm:inline">{selectedSupplier.contactName && `Contacto: ${selectedSupplier.contactName}`}</span>
                                         </p>
                                     </div>
                                 </div>
                                 <div className="flex gap-2">
-                                    <button onClick={() => onDeleteSupplier(selectedSupplier.id)} className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-2xl transition-all" title="Eliminar Proveedor"><Trash2 size={20}/></button>
+                                    <button onClick={() => onDeleteSupplier(selectedSupplier.id)} className="p-2 lg:p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-2xl transition-all" title="Eliminar Proveedor"><Trash2 size={20}/></button>
                                 </div>
                             </div>
 
-                            <div className="flex-1 p-8 overflow-y-auto space-y-8">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="flex-1 p-6 lg:p-8 overflow-y-auto space-y-8">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                     <div className="bg-slate-50 dark:bg-slate-900/50 p-5 rounded-3xl border border-slate-100 dark:border-slate-700">
                                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-2"><History size={14}/> Frecuencia</p>
                                         <div className="text-2xl font-black text-slate-800 dark:text-white">{supplierStats[selectedSupplier.id]?.count} <span className="text-xs font-bold text-slate-400">Ordenes</span></div>

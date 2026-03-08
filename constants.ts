@@ -26,6 +26,7 @@ export const TECH_PRODUCTS: Product[] = [
   { id: '2', code: '102586458', name: 'BATERIA IPHONE X ORIGINAL', category: 'BATERIAS', price: 85.00, cost: 60.00, stock: 12, location: 'BAT-01', brand: 'APPLE' },
   { id: '3', code: '102256745', name: 'PIN DE CARGA TIPO C GENERICA', category: 'REPUESTOS', price: 15.00, cost: 7.00, stock: 50, location: 'CAJ-22', brand: 'GENERICO' },
   { id: '4', code: '102266765', name: 'MICA DE VIDRIO 9D REDMI NOTE 10', category: 'ACCESORIOS', price: 20.00, cost: 5.00, stock: 30, location: 'EX-01', brand: 'XIAOMI' },
+  { id: 'MANO-DE-OBRA', code: 'SRV-001', name: 'MANO DE OBRA', category: 'SERVICIOS', price: 0.00, cost: 0.00, stock: 9999, location: 'TALLER', brand: 'SapiSoft' },
 ];
 
 export const TECH_CATEGORIES: Category[] = [

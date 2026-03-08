@@ -7,7 +7,7 @@ import {
     TrendingUp, TrendingDown, SearchCode, BadgeCheck, AlertCircle, ChevronRight, 
     Timer, Tag, Activity, Wrench, Star, FileScan 
 } from 'lucide-react';
-import { SaleRecord, PurchaseRecord, StockMovement, CashMovement, CartItem, Product } from '../types';
+import { SaleRecord, PurchaseRecord, StockMovement, CashMovement, CartItem, Product, BankAccount, ServiceOrder } from '../types';
 
 interface HistoryQueriesProps {
     salesHistory: SaleRecord[];
@@ -16,6 +16,8 @@ interface HistoryQueriesProps {
     cashMovements: CashMovement[];
     initialTab: 'ventas' | 'compras' | 'kardex' | 'notas_credito' | 'ingresos' | 'egresos' | 'historial_producto';
     products?: Product[];
+    bankAccounts?: BankAccount[];
+    services?: ServiceOrder[];
 }
 
 const formatSymbol = (code?: string) => {
@@ -26,7 +28,7 @@ const formatSymbol = (code?: string) => {
     return code;
 };
 
-export const HistoryQueries: React.FC<HistoryQueriesProps> = ({ salesHistory, purchasesHistory, stockMovements, cashMovements, initialTab, products = [] }) => {
+export const HistoryQueries: React.FC<HistoryQueriesProps> = ({ salesHistory, purchasesHistory, stockMovements, cashMovements, initialTab, products = [], bankAccounts = [], services = [] }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
@@ -83,8 +85,8 @@ export const HistoryQueries: React.FC<HistoryQueriesProps> = ({ salesHistory, pu
         let list: any[] = [];
         if (activeTab === 'ventas') list = salesHistory;
         else if (activeTab === 'compras') list = purchasesHistory;
-        else if (activeTab === 'ingresos') list = cashMovements.filter(m => m.type === 'Ingreso' && m.category?.toUpperCase() !== 'VENTA');
-        else if (activeTab === 'egresos') list = cashMovements.filter(m => m.type === 'Egreso' && m.category?.toUpperCase() !== 'COMPRA');
+        else if (activeTab === 'ingresos') list = cashMovements.filter(m => m.type === 'Ingreso' && m.category?.toUpperCase() !== 'VENTA' && m.category?.toUpperCase() !== 'SERVICIO');
+        else if (activeTab === 'egresos') list = cashMovements.filter(m => m.type === 'Egreso' && m.category?.toUpperCase() !== 'COMPRA' && m.category?.toUpperCase() !== 'PAGO PROVEEDOR');
         else if (activeTab === 'historial_producto') list = selectedProductId ? stockMovements.filter(m => m.productId === selectedProductId) : [];
         else if (activeTab === 'notas_credito') list = stockMovements.filter(m => m.reference.toUpperCase().includes('NC #'));
         else list = stockMovements;
@@ -126,6 +128,36 @@ export const HistoryQueries: React.FC<HistoryQueriesProps> = ({ salesHistory, pu
         const purchaseIdMatch = ref.match(/COMPRA.*#([A-Z0-9-]+)/) || ref.match(/ORDEN.*#([A-Z0-9-]+)/) || (item.id.startsWith('PUR-') ? [null, item.id] : null);
         const ncIdMatch = ref.match(/NC #([A-Z0-9-]+)/);
         const originalTicketFromNC = ref.match(/DEV\. TICKET #([A-Z0-9-]+)/);
+        const serviceIdMatch = ref.match(/TICKET SERVICIO #SRV-([A-Z0-9-]+)/) || ref.match(/SERVICIO #([A-Z0-9-]+)/);
+
+        if (serviceIdMatch) {
+            const srvId = serviceIdMatch[1];
+            const service = services.find(s => s.id === srvId);
+            if (service) {
+                const itemsToShow = [
+                    ...(service.cost > 0 ? [{ name: 'MANO DE OBRA', quantity: 1, price: service.cost }] : []),
+                    ...(service.usedProducts || []).map(p => ({
+                        name: p.productName,
+                        quantity: p.quantity,
+                        price: p.price
+                    }))
+                ];
+                setLinkedRecord({
+                    id: service.id,
+                    date: service.exitDate || service.entryDate,
+                    time: service.exitTime || service.entryTime,
+                    clientName: service.client,
+                    items: itemsToShow,
+                    total: itemsToShow.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0),
+                    type: 'SALE',
+                    docType: 'TICKET SERVICIO',
+                    displayId: `SRV-${service.id}`,
+                    client: { name: service.client, dni: '---' },
+                    currency: 'PEN'
+                });
+                return;
+            }
+        }
 
         if (ref.includes('VENTA') || activeTab === 'ventas' || ncIdMatch || ref.includes('NC #')) {
             let searchId = activeTab === 'ventas' ? item.id : (ticketIdMatch ? ticketIdMatch[1] : (originalTicketFromNC ? originalTicketFromNC[1] : null));
@@ -278,12 +310,13 @@ export const HistoryQueries: React.FC<HistoryQueriesProps> = ({ salesHistory, pu
 
             <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 flex-1 overflow-hidden flex flex-col">
                 <div className="flex-1 overflow-auto">
-                    <table className="w-full text-left text-xs">
+                    {/* Desktop Table */}
+                    <table className="hidden md:table w-full text-left text-xs">
                         <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-900/80 backdrop-blur-md text-slate-400 font-black uppercase tracking-widest border-b">
                             <tr>
                                 <th className="px-6 py-4">Fecha / Hora</th>
-                                <th className="px-6 py-4">{activeTab === 'historial_producto' ? 'Tipo Operación' : (activeTab === 'ventas' ? 'Cliente' : 'Concepto / Proveedor')}</th>
-                                <th className="px-6 py-4">{activeTab === 'historial_producto' ? 'Detalle / Comprobante' : 'Documento / ID'}</th>
+                                <th className="px-6 py-4">{activeTab === 'historial_producto' ? 'Tipo Operación' : (activeTab === 'ventas' ? 'Cliente' : (activeTab === 'kardex' ? 'Producto' : 'Concepto / Proveedor'))}</th>
+                                <th className="px-6 py-4">{activeTab === 'historial_producto' || activeTab === 'kardex' ? 'Detalle / Comprobante' : 'Documento / ID'}</th>
                                 {activeTab === 'kardex' || activeTab === 'notas_credito' || activeTab === 'historial_producto' ? (
                                     <>
                                         <th className="px-6 py-4 text-center">Variación</th>
@@ -319,14 +352,23 @@ export const HistoryQueries: React.FC<HistoryQueriesProps> = ({ salesHistory, pu
                                                     <op.icon size={12}/> {op.label}
                                                 </div>
                                             ) : (
-                                                <div className="font-black text-slate-700 dark:text-white uppercase truncate max-w-[250px]">
-                                                    {activeTab === 'ventas' ? item.clientName : (item.supplierName || item.concept)}
+                                                <div>
+                                                    <div className="font-black text-slate-700 dark:text-white uppercase truncate max-w-[250px]">
+                                                        {activeTab === 'ventas' ? item.clientName : (activeTab === 'kardex' ? item.productName : (item.supplierName || item.concept))}
+                                                    </div>
+                                                    {item.accountId && (
+                                                        <div className="text-[9px] font-black text-indigo-500 uppercase tracking-tighter flex items-center gap-1 mt-0.5">
+                                                            <Landmark size={10}/> {bankAccounts.find(b => b.id === item.accountId)?.accountNumber || 'CTA: ' + item.accountId}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="text-xs font-mono font-black text-slate-800 dark:text-white uppercase truncate max-w-[200px]">
-                                                {activeTab === 'historial_producto' ? item.reference : (item.docType || item.id.substring(0,10))}
+                                                {activeTab === 'historial_producto' || activeTab === 'kardex' ? item.reference : (
+                                                    activeTab === 'ingresos' ? (item.concept.match(/#([A-Z0-9-]+)/) ? item.concept.match(/#([A-Z0-9-]+)/)[0] : (item.docType || item.id.substring(0,10))) : (item.docType || item.id.substring(0,10))
+                                                )}
                                             </div>
                                             <div className="text-[10px] font-mono text-slate-400">ID: #{item.id.substring(0,8)}</div>
                                         </td>
@@ -361,6 +403,71 @@ export const HistoryQueries: React.FC<HistoryQueriesProps> = ({ salesHistory, pu
                             })}
                         </tbody>
                     </table>
+
+                    {/* Mobile Card List */}
+                    <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-700">
+                        {activeTab === 'historial_producto' && !selectedProductId ? (
+                            <div className="text-center py-12 text-slate-300 font-black uppercase tracking-[0.1em] italic flex flex-col items-center gap-4 opacity-30">
+                                <SearchCode size={48}/>
+                                <p className="text-[10px]">Busque un producto arriba</p>
+                            </div>
+                        ) : filteredData.length === 0 ? (
+                            <div className="text-center py-12 text-slate-300 font-black uppercase tracking-[0.1em] italic text-[10px]">
+                                No se encontraron registros
+                            </div>
+                        ) : filteredData.map((item: any) => {
+                            const op = activeTab === 'historial_producto' ? formatOpType(item.reference) : null;
+                            const amount = item.amount ? item.amount : (item.total ? item.total : 0);
+                            
+                            return (
+                                <div key={item.id} className="p-4 space-y-3 active:bg-slate-50 dark:active:bg-slate-900/50 transition-colors" onClick={() => handleViewDetail(item)}>
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] font-black text-slate-700 dark:text-slate-200">{item.date}</span>
+                                            <span className="text-[9px] text-slate-400 font-bold">{item.time}</span>
+                                        </div>
+                                        {activeTab === 'kardex' || activeTab === 'notas_credito' || activeTab === 'historial_producto' ? (
+                                            <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase ${item.type === 'ENTRADA' ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50'}`}>
+                                                {item.type === 'ENTRADA' ? '+' : '-'}{item.quantity}
+                                            </span>
+                                        ) : (
+                                            <span className={`text-xs font-black ${item.type === 'Ingreso' ? 'text-emerald-600' : 'text-red-600'}`}>
+                                                {formatSymbol(item.currency)} {amount.toFixed(2)}
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    <div className="flex flex-col gap-1">
+                                        {activeTab === 'historial_producto' && op ? (
+                                            <div className={`inline-flex items-center gap-1.5 w-fit px-2 py-0.5 rounded-lg text-[8px] font-black uppercase border border-${op.color}-100 bg-${op.color}-50 text-${op.color}-600`}>
+                                                <op.icon size={10}/> {op.label}
+                                            </div>
+                                        ) : (
+                                            <div className="text-[11px] font-black text-slate-800 dark:text-white uppercase truncate">
+                                                {activeTab === 'ventas' ? item.clientName : (activeTab === 'kardex' ? item.productName : (item.supplierName || item.concept))}
+                                            </div>
+                                        )}
+                                        
+                                        <div className="flex items-center justify-between">
+                                            <div className="text-[10px] font-mono font-bold text-slate-500 truncate max-w-[180px]">
+                                                {activeTab === 'historial_producto' || activeTab === 'kardex' ? item.reference : (item.docType || item.id.substring(0,10))}
+                                            </div>
+                                            <div className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">
+                                                {item.user.split(' ')[0]}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {(activeTab === 'kardex' || activeTab === 'historial_producto') && (
+                                        <div className="flex justify-between items-center pt-2 border-t border-slate-50 dark:border-slate-700/50">
+                                            <span className="text-[9px] font-black text-slate-400 uppercase">Saldo Stock:</span>
+                                            <span className="text-[11px] font-black text-slate-700 dark:text-slate-200">{item.currentStock} Und</span>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
             </div>
 

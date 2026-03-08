@@ -698,6 +698,7 @@ export default function WhatsAppModule({
                 } catch (e: any) {
                     errorMsg = `Gemini Error: ${e.message}`;
                     if (e.message?.includes('404')) errorMsg = "Error: Modelo no encontrado o acceso denegado.";
+                    if (e.message?.includes('Rate exceeded') || e.message?.includes('429')) errorMsg = "Error: Límite de tasa excedido. Espera un momento.";
                 }
             }
         }
