@@ -18,7 +18,7 @@ interface SalesModuleProps {
     bankAccounts: BankAccount[]; 
     locations: GeoLocation[];
     onAddClient: (client: Client) => void;
-    onProcessSale: (cart: CartItem[], total: number, docType: string, clientName: string, paymentBreakdown: PaymentBreakdown, ticketId: string, detailedPayments: any[], currency: string, exchangeRate: number) => void;
+    onProcessSale: (cart: CartItem[], total: number, docType: string, clientName: string, paymentBreakdown: PaymentBreakdown, ticketId: string, detailedPayments: any[], currency: string, exchangeRate: number) => any;
     cart: CartItem[];
     setCart: (cart: CartItem[]) => void;
     client: Client | null;
@@ -375,9 +375,8 @@ export const SalesModule: React.FC<SalesModuleProps> = ({
         setSendToWallet(!!(client && client.name !== 'CLIENTE VARIOS'));
         setShowPaymentModal(true);
     } else {
-        const ticketId = 'CR-' + Math.floor(Math.random() * 1000000).toString();
-        setTicketData({ id: ticketId, date: new Date().toLocaleDateString('es-PE'), time: new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false }), client: client || { name: 'CLIENTE VARIOS', dni: '00000000' }, docType: fullDocType, items: [...cart], total: safeTotal, subtotal: safeTotal / 1.18, igv: safeTotal - (safeTotal / 1.18), currency, condition: 'CRÉDITO (' + creditDays + ' DÍAS)', payments: [] });
-        onProcessSale([...cart], safeTotal, fullDocType, client?.name || 'CLIENTE VARIOS', { cash: 0, yape: 0, card: 0, bank: 0, wallet: 0 }, ticketId, [], currency, parseFloat(exchangeRate || '1'));
+        const result = onProcessSale([...cart], safeTotal, fullDocType, client?.name || 'CLIENTE VARIOS', { cash: 0, yape: 0, card: 0, bank: 0, wallet: 0 }, '', [], currency, parseFloat(exchangeRate || '1'));
+        setTicketData({ id: result?.correlativeId || 'CR-' + Date.now(), globalId: result?.globalId, date: new Date().toLocaleDateString('es-PE'), time: new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false }), client: client || { name: 'CLIENTE VARIOS', dni: '00000000' }, docType: fullDocType, items: [...cart], total: safeTotal, subtotal: safeTotal / 1.18, igv: safeTotal - (safeTotal / 1.18), currency, condition: 'CRÉDITO (' + creditDays + ' DÍAS)', payments: [] });
         setCart([]); setClient(null); setClientSearchTerm('CLIENTE VARIOS'); setDocNumber(''); setShowTicket(true);
     }
   };
@@ -420,6 +419,9 @@ export const SalesModule: React.FC<SalesModuleProps> = ({
       const currentPaymentTotal = getPaymentTotal();
       const finalExcess = Math.max(0, currentPaymentTotal - total);
       let paymentsForRecord = paymentList.map(p => ({...p}));
+      
+      let depositMethod = 'Efectivo';
+      let depositAccount = '';
 
       if (finalExcess > 0) {
           if (sendToWallet && client && client.name !== 'CLIENTE VARIOS' && onUpdateClientBalance) {
@@ -433,9 +435,8 @@ export const SalesModule: React.FC<SalesModuleProps> = ({
               }
               paymentsForRecord = paymentsForRecord.filter(p => p.amount > 0.001);
               const sourcePayment = paymentList[paymentList.length - 1]; 
-              const depositMethod = sourcePayment ? sourcePayment.method : 'Efectivo';
-              const depositAccount = sourcePayment ? sourcePayment.accountId : '';
-              onUpdateClientBalance(client.id, finalExcess, `VUELTO TICKET #${ticketId}`, depositMethod, depositAccount);
+              depositMethod = sourcePayment ? sourcePayment.method : 'Efectivo';
+              depositAccount = sourcePayment ? sourcePayment.accountId : '';
           } else {
               if (isPurelyDigital) return alert("Error: No se puede dar vuelto en efectivo para pagos digitales.");
               let remainingToDeduct = finalExcess;
@@ -451,14 +452,6 @@ export const SalesModule: React.FC<SalesModuleProps> = ({
           }
       }
 
-      setTicketData({ 
-          id: ticketId, date: new Date().toLocaleDateString('es-PE'), time: new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false }), 
-          client: client || { name: 'CLIENTE VARIOS', dni: '00000000' }, docType: fullDocType, items: [...cart], total, subtotal: total / 1.18, igv: total - (total / 1.18), 
-          currency, condition: 'CONTADO', payments: paymentList, 
-          change: (!sendToWallet || !client || client.name === 'CLIENTE VARIOS') ? finalExcess : 0,
-          walletDeposit: (sendToWallet && client && client.name !== 'CLIENTE VARIOS') ? finalExcess : 0
-      });
-
       const b: PaymentBreakdown = { 
           cash: paymentsForRecord.filter(p => p.method === 'Efectivo').reduce((a, b) => a + b.amount, 0), 
           yape: paymentsForRecord.filter(p => p.method === 'Yape' || p.method === 'Plin' || p.method === 'Yape/Plin').reduce((a, b) => a + b.amount, 0), 
@@ -467,7 +460,20 @@ export const SalesModule: React.FC<SalesModuleProps> = ({
           wallet: paymentsForRecord.filter(p => p.method === 'Saldo Favor').reduce((a, b) => a + b.amount, 0) 
       };
       
-      onProcessSale([...cart], total, fullDocType, client?.name || 'CLIENTE VARIOS', b, ticketId, paymentsForRecord, currency, parseFloat(exchangeRate));
+      const result = onProcessSale([...cart], total, fullDocType, client?.name || 'CLIENTE VARIOS', b, '', paymentsForRecord, currency, parseFloat(exchangeRate));
+      
+      if (finalExcess > 0 && sendToWallet && client && client.name !== 'CLIENTE VARIOS' && onUpdateClientBalance) {
+          onUpdateClientBalance(client.id, finalExcess, `VUELTO TICKET #${result?.correlativeId || ticketId}`, depositMethod, depositAccount);
+      }
+
+      setTicketData({ 
+          id: result?.correlativeId || ticketId, globalId: result?.globalId, date: new Date().toLocaleDateString('es-PE'), time: new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false }), 
+          client: client || { name: 'CLIENTE VARIOS', dni: '00000000' }, docType: fullDocType, items: [...cart], total, subtotal: total / 1.18, igv: total - (total / 1.18), 
+          currency, condition: 'CONTADO', payments: paymentList, 
+          change: (!sendToWallet || !client || client.name === 'CLIENTE VARIOS') ? finalExcess : 0,
+          walletDeposit: (sendToWallet && client && client.name !== 'CLIENTE VARIOS') ? finalExcess : 0
+      });
+
       setCart([]); setClient(null); setClientSearchTerm('CLIENTE VARIOS'); setDocNumber(''); setShowPaymentModal(false); setShowTicket(true);
   };
 
@@ -968,6 +974,7 @@ export const SalesModule: React.FC<SalesModuleProps> = ({
                             </div>
                             <div className="mb-3 space-y-0.5 text-black">
                                 <div className="flex justify-between"><span>Venta:</span> <span className="font-bold">#{ticketData.id}</span></div>
+                                {ticketData.globalId && <div className="flex justify-between"><span>SaaS ID:</span> <span className="font-bold">#{ticketData.globalId}</span></div>}
                                 <div className="flex justify-between"><span>Fecha:</span> <span className="font-bold">{ticketData.date}</span></div>
                                 <div className="flex justify-between"><span>Cliente:</span> <span className="font-bold truncate max-w-[150px]">{ticketData.client.name}</span></div>
                                 <div className="flex justify-between"><span>Doc:</span> <span className="uppercase font-bold">{ticketData.docType}</span></div>
@@ -1035,7 +1042,7 @@ export const SalesModule: React.FC<SalesModuleProps> = ({
                         <div className="a4-preview-container bg-white p-12 shadow-sm font-sans text-xs text-slate-800 mx-auto min-h-[1100px] flex flex-col shrink-0">
                             <div className="flex justify-between items-start mb-8 border-b-2 border-blue-600 pb-6">
                                 <div className="space-y-1"><h1 className="text-2xl font-black text-blue-600 uppercase tracking-tighter">SapiSoft ERP</h1><p className="font-bold text-slate-500 uppercase">{ticketData.docType === 'PRE-CUENTA / PROFORMA' ? 'PRE-CUENTA DE VENTA' : 'SISTEMA INTEGRAL DE VENTAS'}</p></div>
-                                <div className="bg-slate-50 border-2 border-slate-200 p-4 rounded-xl text-center min-w-[200px]"><p className="bg-blue-600 text-white py-1 px-2 font-black text-[10px] rounded mb-1 uppercase">{ticketData.docType}</p><p className="font-mono text-lg font-black">{ticketData.id}</p></div>
+                                <div className="bg-slate-50 border-2 border-slate-200 p-4 rounded-xl text-center min-w-[200px]"><p className="bg-blue-600 text-white py-1 px-2 font-black text-[10px] rounded mb-1 uppercase">{ticketData.docType}</p><p className="font-mono text-lg font-black">{ticketData.id}</p>{ticketData.globalId && <p className="font-mono text-xs text-slate-500 mt-1">SaaS ID: {ticketData.globalId}</p>}</div>
                             </div>
                             <div className="grid grid-cols-2 gap-8 mb-8">
                                 <div className="bg-slate-50 p-4 rounded-xl border border-slate-200"><p className="text-[9px] font-black text-blue-600 uppercase mb-2 border-b pb-1">Datos del Cliente</p><p className="font-black text-sm uppercase">{ticketData.client.name}</p><p><strong>Identificación:</strong> {ticketData.client.dni}</p></div>
@@ -1085,28 +1092,7 @@ export const SalesModule: React.FC<SalesModuleProps> = ({
                         </div>
                     )}
                 </div>
-                <div className="no-print flex flex-col sm:flex-row gap-2 shrink-0 bg-white p-4 rounded-xl border border-slate-200">
-                    <button 
-                        onClick={() => setShowTicket(false)} 
-                        className="flex-1 py-3 bg-white text-slate-500 font-black rounded-xl text-[10px] uppercase border hover:bg-slate-50 transition-all"
-                    >
-                        Nueva Venta
-                    </button>
-                    {onCancel && (
-                        <button 
-                            onClick={() => { setShowTicket(false); onCancel(); }} 
-                            className="flex-1 py-3 bg-slate-100 text-slate-600 font-black rounded-xl text-[10px] uppercase border hover:bg-slate-200 transition-all"
-                        >
-                            Salir
-                        </button>
-                    )}
-                    <button 
-                        onClick={handlePrint} 
-                        className="flex-1 py-3 bg-blue-600 text-white font-black rounded-xl text-[10px] flex items-center justify-center gap-2 shadow-lg hover:bg-blue-700 transition-all uppercase tracking-widest"
-                    >
-                        <Printer size={16}/> Imprimir
-                    </button>
-                </div>
+                <div className="no-print flex gap-2 shrink-0 bg-white p-4 rounded-xl border border-slate-200"><button onClick={() => setShowTicket(false)} className="flex-1 py-3 bg-white text-slate-500 font-black rounded-xl text-[10px] uppercase border">Finalizar</button><button onClick={handlePrint} className="flex-1 py-3 bg-blue-600 text-white font-black rounded-xl text-[10px] flex items-center justify-center gap-2 shadow-lg hover:bg-blue-700 transition-all uppercase tracking-widest"><Printer size={16}/> Imprimir</button></div>
             </div>
         </div>
       )}

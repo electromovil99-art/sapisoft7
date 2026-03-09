@@ -372,6 +372,8 @@ const App = () => {
       
       // Use functional update to ensure no movements are lost if multiple updates happen quickly (e.g., sale + wallet deposit)
       setCashMovements(prev => [...newCashMovements, ...prev]);
+
+      return { globalId, correlativeId };
   };
 
   const handleProcessPurchase = (cart: CartItem[], total: number, docType: string, supplierName: string, paymentCondition: 'Contado' | 'Credito', creditDays: number, detailedPayments: any[], currency?: string, exchangeRate?: number) => {
@@ -445,6 +447,8 @@ const App = () => {
           });
           setCashMovements(prev => [...newPurchaseMovements, ...prev]);
       }
+
+      return { globalId, correlativeId };
   };
 
   const handleRegisterPaymentReceivable = (ticketId: string, amount: number, paymentDetails: any, allocations?: Record<string, number>) => {
