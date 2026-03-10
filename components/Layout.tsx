@@ -25,6 +25,8 @@ interface LayoutProps {
   currentBranchId: string;
   onSwitchBranch: (id: string) => void;
   onCreateBranch: (name: string, address: string) => void;
+  isOffline?: boolean;
+  pendingSyncCount?: number;
 }
 
 const SafeIcon = ({ icon: IconComponent, ...props }: any) => {
@@ -35,7 +37,8 @@ const SafeIcon = ({ icon: IconComponent, ...props }: any) => {
 const Layout: React.FC<LayoutProps> = ({ 
   children, companyName, companyLogo, navStructure, currentView, activeFolder,
   onNavigate, onBack, isDarkMode, toggleTheme, session, onLogout, 
-  isSyncEnabled, toggleSyncMode, branches, currentBranchId, onSwitchBranch, onCreateBranch
+  isSyncEnabled, toggleSyncMode, branches, currentBranchId, onSwitchBranch, onCreateBranch,
+  isOffline = false, pendingSyncCount = 0
 }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -149,6 +152,15 @@ const Layout: React.FC<LayoutProps> = ({
 
             {/* Botones de Acción */}
             <div className="flex items-center gap-1.5 md:gap-2 ml-auto md:ml-2 pl-2 md:pl-4 border-l border-white/10 shrink-0">
+               {isOffline && (
+                   <div className="hidden sm:flex items-center gap-1.5 px-2 py-1 bg-amber-500/20 border border-amber-500/40 rounded-lg text-amber-400">
+                       <Cloud size={12} className="opacity-50" />
+                       <span className="text-[9px] font-bold uppercase tracking-wider">Sin conexión</span>
+                       {pendingSyncCount > 0 && (
+                           <span className="bg-amber-500 text-slate-900 text-[8px] font-black px-1.5 rounded-full">{pendingSyncCount}</span>
+                       )}
+                   </div>
+               )}
                <button onClick={handleSyncClick} className={`p-1.5 md:p-2 rounded-xl transition-all ${isSyncEnabled ? 'text-emerald-400 bg-emerald-500/20 border border-emerald-400/30' : 'text-white/30 hover:text-white/80'}`}>
                     {isSyncing ? <RefreshCw size={14} className="animate-spin text-white"/> : <Cloud size={14}/>}
                 </button>

@@ -68,8 +68,83 @@ import {
   getNextSequence 
 } from './utils/traceability';
 
+import { syncDataToSupabase, deleteDataFromSupabase } from './services/supabaseService';
+
 const App = () => {
-  const [session, setSession] = useState<AuthSession | null>(null);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [pendingSyncCount, setPendingSyncCount] = useState(0);
+
+  const addToOfflineQueue = (tableName: string, data: any, isDelete: boolean) => {
+      const queue = JSON.parse(localStorage.getItem('supabase_sync_queue') || '[]');
+      queue.push({
+          id: Date.now().toString() + Math.random().toString(),
+          tableName,
+          data,
+          isDelete,
+          timestamp: Date.now()
+      });
+      localStorage.setItem('supabase_sync_queue', JSON.stringify(queue));
+      setPendingSyncCount(queue.length);
+  };
+
+  const processOfflineQueue = async () => {
+      if (!navigator.onLine) return;
+      const queue = JSON.parse(localStorage.getItem('supabase_sync_queue') || '[]');
+      if (queue.length === 0) return;
+
+      const remainingQueue = [...queue];
+      for (const action of queue) {
+          try {
+              if (action.isDelete) {
+                  await deleteDataFromSupabase(action.tableName, action.data);
+              } else {
+                  await syncDataToSupabase(action.tableName, Array.isArray(action.data) ? action.data : [action.data]);
+              }
+              remainingQueue.shift();
+              localStorage.setItem('supabase_sync_queue', JSON.stringify(remainingQueue));
+              setPendingSyncCount(remainingQueue.length);
+          } catch (e) {
+              console.error("Failed to process queued action", action, e);
+              break;
+          }
+      }
+  };
+
+  const syncToSupabase = async (tableName: string, data: any, isDelete: boolean = false) => {
+      if (localStorage.getItem('isSupabaseActive') === 'true') {
+          if (!navigator.onLine) {
+              addToOfflineQueue(tableName, data, isDelete);
+              return;
+          }
+          try {
+              if (isDelete) {
+                  await deleteDataFromSupabase(tableName, data);
+              } else {
+                  await syncDataToSupabase(tableName, Array.isArray(data) ? data : [data]);
+              }
+          } catch (e) {
+              console.error(`Error syncing ${tableName} to Supabase:`, e);
+              addToOfflineQueue(tableName, data, isDelete);
+          }
+      }
+  };
+
+  const [session, setSession] = useState<AuthSession | null>(() => {
+    const saved = localStorage.getItem('app_session');
+    const lastActivity = localStorage.getItem('last_activity');
+    
+    if (saved && lastActivity) {
+      const now = Date.now();
+      const oneHour = 60 * 60 * 1000;
+      if (now - parseInt(lastActivity, 10) < oneHour) {
+        return JSON.parse(saved);
+      } else {
+        localStorage.removeItem('app_session');
+        localStorage.removeItem('last_activity');
+      }
+    }
+    return null;
+  });
   const [currentView, setCurrentView] = useState<ViewState>(ViewState.DASHBOARD);
   const [activeMobileCategory, setActiveMobileCategory] = useState<string | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -141,6 +216,30 @@ const App = () => {
     window.history.replaceState({ view: currentView, folder: activeMobileCategory }, '');
 
     return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // --- OFFLINE SYNC HANDLING ---
+  useEffect(() => {
+      const handleOnline = () => {
+          setIsOffline(false);
+          processOfflineQueue();
+      };
+      const handleOffline = () => setIsOffline(true);
+
+      window.addEventListener('online', handleOnline);
+      window.addEventListener('offline', handleOffline);
+
+      // Initial check
+      const queue = JSON.parse(localStorage.getItem('supabase_sync_queue') || '[]');
+      setPendingSyncCount(queue.length);
+      if (navigator.onLine && queue.length > 0) {
+          processOfflineQueue();
+      }
+
+      return () => {
+          window.removeEventListener('online', handleOnline);
+          window.removeEventListener('offline', handleOffline);
+      };
   }, []);
 
   const handleNavigate = (view: ViewState) => {
@@ -243,20 +342,57 @@ const App = () => {
   // --- ACTIONS ---
   const handleLogin = (user: SystemUser) => {
     const tenant = tenants.find(t => t.companyName === user.companyName);
-    setSession({
+    const newSession = {
       user,
       businessName: user.companyName,
       token: 'mock-token',
       baseCurrency: tenant?.baseCurrency || 'PEN'
-    });
+    };
+    setSession(newSession);
+    localStorage.setItem('app_session', JSON.stringify(newSession));
+    localStorage.setItem('last_activity', Date.now().toString());
     setCompanyName(user.companyName);
     setBaseCurrency(tenant?.baseCurrency || 'PEN');
   };
 
   const handleLogout = () => {
     setSession(null);
+    localStorage.removeItem('app_session');
+    localStorage.removeItem('last_activity');
     handleNavigate(ViewState.DASHBOARD);
   };
+
+  // --- INACTIVITY TIMEOUT ---
+  useEffect(() => {
+    if (!session) return;
+
+    const updateActivity = () => {
+      localStorage.setItem('last_activity', Date.now().toString());
+    };
+
+    const checkInactivity = () => {
+      const lastActivity = localStorage.getItem('last_activity');
+      if (lastActivity) {
+        const now = Date.now();
+        const oneHour = 60 * 60 * 1000;
+        if (now - parseInt(lastActivity, 10) >= oneHour) {
+          handleLogout();
+        }
+      }
+    };
+
+    // Update activity on user interactions
+    const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+    events.forEach(event => window.addEventListener(event, updateActivity, { passive: true }));
+
+    // Check inactivity every minute
+    const interval = setInterval(checkInactivity, 60000);
+
+    return () => {
+      events.forEach(event => window.removeEventListener(event, updateActivity));
+      clearInterval(interval);
+    };
+  }, [session]);
 
   const handleRegisterFromCRM = (name: string, phone: string) => {
       setPendingClientData({ name, phone });
@@ -265,6 +401,7 @@ const App = () => {
 
   const handleAddClient = (c: Client) => {
       setClients(prev => [...prev, c]);
+      syncToSupabase('clients', c);
       if (c.phone) {
           const cleanPhone = c.phone.replace(/\D/g, '');
           setCrmDb(prev => ({
@@ -281,10 +418,22 @@ const App = () => {
       }
   };
 
-  const handleAddProduct = (p: Product) => setProducts(prev => [...prev, p]);
-  const handleUpdateProduct = (p: Product) => setProducts(prev => prev.map(pr => pr.id === p.id ? p : pr));
-  const handleDeleteProduct = (id: string) => setProducts(prev => prev.filter(p => p.id !== id));
-  const handleAddProducts = (newProds: Product[]) => setProducts(prev => [...prev, ...newProds]);
+  const handleAddProduct = (p: Product) => {
+      setProducts(prev => [...prev, p]);
+      syncToSupabase('products', p);
+  };
+  const handleUpdateProduct = (p: Product) => {
+      setProducts(prev => prev.map(pr => pr.id === p.id ? p : pr));
+      syncToSupabase('products', p);
+  };
+  const handleDeleteProduct = (id: string) => {
+      setProducts(prev => prev.filter(p => p.id !== id));
+      syncToSupabase('products', id, true);
+  };
+  const handleAddProducts = (newProds: Product[]) => {
+      setProducts(prev => [...prev, ...newProds]);
+      syncToSupabase('products', newProds);
+  };
 
   const handleUpdateSaleSunatStatus = (ticketId: string, status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'ERROR', response: string) => {
       setSales(prev => prev.map(s => s.id === ticketId ? { 
@@ -325,8 +474,24 @@ const App = () => {
       };
       // Use functional update to avoid race conditions
       setSales(prev => [sale, ...prev]);
+      syncToSupabase('sales', sale);
 
-      // ... existing stock update logic ...
+      // Update product stock
+      const updatedProducts: Product[] = [];
+      setProducts(prev => {
+          const newProducts = [...prev];
+          cart.forEach(item => {
+              const idx = newProducts.findIndex(p => p.id === item.id);
+              if (idx !== -1) {
+                  newProducts[idx] = { ...newProducts[idx], stock: newProducts[idx].stock - item.quantity };
+                  updatedProducts.push(newProducts[idx]);
+              }
+          });
+          return newProducts;
+      });
+      if (updatedProducts.length > 0) {
+          syncToSupabase('products', updatedProducts);
+      }
 
       const newStockMoves: StockMovement[] = cart.map(item => {
           const product = products.find(p => p.id === item.id);
@@ -348,6 +513,7 @@ const App = () => {
           };
       });
       setStockMovements(prev => [...newStockMoves, ...prev]);
+      syncToSupabase('stock_movements', newStockMoves);
 
       // GENERATE FINANCIAL MOVEMENTS FOR ALL PAYMENTS (CASH & BANK)
       const newCashMovements: CashMovement[] = [];
@@ -397,6 +563,9 @@ const App = () => {
       
       // Use functional update to ensure no movements are lost if multiple updates happen quickly (e.g., sale + wallet deposit)
       setCashMovements(prev => [...newCashMovements, ...prev]);
+      if (newCashMovements.length > 0) {
+          syncToSupabase('cash_movements', newCashMovements);
+      }
 
       return { globalId, correlativeId };
   };
@@ -424,8 +593,28 @@ const App = () => {
           user: session?.user.fullName || 'Admin'
       };
       setPurchases(prev => [purchase, ...prev]);
+      syncToSupabase('purchases', purchase);
 
-      // ... existing stock update logic ...
+      // Update product stock and cost
+      const updatedProducts: Product[] = [];
+      setProducts(prev => {
+          const newProducts = [...prev];
+          cart.forEach(item => {
+              const idx = newProducts.findIndex(p => p.id === item.id);
+              if (idx !== -1) {
+                  const currentStock = newProducts[idx].stock;
+                  const currentCost = newProducts[idx].cost;
+                  const newStock = currentStock + item.quantity;
+                  const newCost = ((currentStock * currentCost) + (item.quantity * item.price)) / newStock;
+                  newProducts[idx] = { ...newProducts[idx], stock: newStock, cost: newCost };
+                  updatedProducts.push(newProducts[idx]);
+              }
+          });
+          return newProducts;
+      });
+      if (updatedProducts.length > 0) {
+          syncToSupabase('products', updatedProducts);
+      }
 
       const newStockMoves: StockMovement[] = cart.map(item => {
           const product = products.find(p => p.id === item.id);
@@ -447,6 +636,7 @@ const App = () => {
           };
       });
       setStockMovements(prev => [...newStockMoves, ...prev]);
+      syncToSupabase('stock_movements', newStockMoves);
 
       // GENERATE FINANCIAL MOVEMENTS FOR PURCHASES
       if (paymentCondition === 'Contado' && detailedPayments) {
@@ -471,6 +661,9 @@ const App = () => {
               });
           });
           setCashMovements(prev => [...newPurchaseMovements, ...prev]);
+          if (newPurchaseMovements.length > 0) {
+              syncToSupabase('cash_movements', newPurchaseMovements);
+          }
       }
 
       return { globalId, correlativeId };
@@ -489,6 +682,7 @@ const App = () => {
         const updatedSale = { ...sale, detailedPayments: [...(sale.detailedPayments || []), newPayment] };
         const newSales = [...prevSales];
         newSales[saleIndex] = updatedSale;
+        syncToSupabase('sales', updatedSale);
         return newSales;
     });
 
@@ -499,15 +693,18 @@ const App = () => {
     
     if (saleForClient) {
         setClients(prevClients => {
-            return prevClients.map(c => {
+            const newClients = prevClients.map(c => {
                 if (c.name === saleForClient.clientName) {
                     let newCreditUsed = Math.max(0, c.creditUsed - allocatedAmount);
                     let newDigitalBalance = c.digitalBalance;
                     if (excess > 0) newDigitalBalance += excess;
-                    return { ...c, creditUsed: newCreditUsed, digitalBalance: newDigitalBalance };
+                    const updatedClient = { ...c, creditUsed: newCreditUsed, digitalBalance: newDigitalBalance };
+                    syncToSupabase('clients', updatedClient);
+                    return updatedClient;
                 }
                 return c;
             });
+            return newClients;
         });
     }
 
@@ -589,8 +786,12 @@ const App = () => {
           branchId: s.branchId || currentBranchId
       };
       setServices(prev => [enrichedService, ...prev]);
+      syncToSupabase('service_orders', enrichedService);
   };
-  const handleUpdateService = (s: ServiceOrder) => setServices(prev => prev.map(item => item.id === s.id ? s : item));
+  const handleUpdateService = (s: ServiceOrder) => {
+      setServices(prev => prev.map(item => item.id === s.id ? s : item));
+      syncToSupabase('service_orders', s);
+  };
   
   const handleFinalizeService = (serviceId: string, total: number, finalStatus: 'Entregado' | 'Devolucion', paymentBreakdown: PaymentBreakdown) => {
       const service = services.find(s => s.id === serviceId);
@@ -604,7 +805,12 @@ const App = () => {
       const productsAmount = (service.usedProducts || []).reduce((sum, p) => sum + (p.price * p.quantity), 0);
       const calculatedTotal = laborAmount + productsAmount;
 
-      setServices(prev => prev.map(s => s.id === serviceId ? { ...s, status: finalStatus, exitDate: dateStr, exitTime: timeStr } : s));
+      setServices(prev => {
+          const newServices = prev.map(s => s.id === serviceId ? { ...s, status: finalStatus, exitDate: dateStr, exitTime: timeStr } : s);
+          const updatedService = newServices.find(s => s.id === serviceId);
+          if (updatedService) syncToSupabase('service_orders', updatedService);
+          return newServices;
+      });
       
       if (finalStatus === 'Devolucion') return;
 
@@ -660,6 +866,7 @@ const App = () => {
 
       if (newMovements.length > 0) {
           setCashMovements(prev => [...newMovements, ...prev]);
+          syncToSupabase('cash_movements', newMovements);
       }
 
       // RECORD AS A SALE SO IT APPEARS IN SALES HISTORY
@@ -719,6 +926,7 @@ const App = () => {
       };
 
       setSales(prev => [newSale, ...prev]);
+      syncToSupabase('sales', newSale);
 
       // RECORD STOCK MOVEMENTS FOR KARDEX
       if (service.usedProducts && service.usedProducts.length > 0) {
@@ -740,37 +948,92 @@ const App = () => {
               };
           });
           setStockMovements(prev => [...newStockMoves, ...prev]);
+          syncToSupabase('stock_movements', newStockMoves);
           
           // Also update product stock in state
+          const updatedProducts: Product[] = [];
           setProducts(prevProducts => {
               const updated = [...prevProducts];
               service.usedProducts?.forEach(p => {
                   const idx = updated.findIndex(prod => prod.id === p.productId);
                   if (idx !== -1) {
                       updated[idx] = { ...updated[idx], stock: updated[idx].stock - p.quantity };
+                      updatedProducts.push(updated[idx]);
                   }
               });
               return updated;
           });
+          if (updatedProducts.length > 0) {
+              syncToSupabase('products', updatedProducts);
+          }
       }
   };
   
-  const handleMarkRepaired = (id: string) => setServices(prev => prev.map(s => s.id === id ? { ...s, status: 'Reparado' } : s));
-  const handleAddSupplier = (s: Supplier) => setSuppliers(prev => [...prev, s]);
-  const handleDeleteSupplier = (id: string) => setSuppliers(prev => prev.filter(s => s.id !== id));
-  const handleAddBrand = (b: Brand) => setBrands(prev => [...prev, b]);
-  const handleDeleteBrand = (id: string) => setBrands(prev => prev.filter(b => b.id !== id));
-  const handleAddCategory = (c: Category) => setCategories(prev => [...prev, c]);
-  const handleDeleteCategory = (id: string) => setCategories(prev => prev.filter(c => c.id !== id));
-  const handleAddLocation = (loc: GeoLocation) => setLocations(prev => [...prev, loc]);
-  const handleDeleteLocation = (id: string) => setLocations(prev => prev.filter(l => l.id !== id));
+  const handleMarkRepaired = (id: string) => {
+      setServices(prev => {
+          const newServices = prev.map(s => s.id === id ? { ...s, status: 'Reparado' } : s);
+          const updatedService = newServices.find(s => s.id === id);
+          if (updatedService) syncToSupabase('service_orders', updatedService);
+          return newServices;
+      });
+  };
+  const handleAddSupplier = (s: Supplier) => {
+      setSuppliers(prev => [...prev, s]);
+      syncToSupabase('suppliers', s);
+  };
+  const handleDeleteSupplier = (id: string) => {
+      setSuppliers(prev => prev.filter(s => s.id !== id));
+      syncToSupabase('suppliers', id, true);
+  };
+  const handleAddBrand = (b: Brand) => {
+      setBrands(prev => [...prev, b]);
+      syncToSupabase('brands', b);
+  };
+  const handleDeleteBrand = (id: string) => {
+      setBrands(prev => prev.filter(b => b.id !== id));
+      syncToSupabase('brands', id, true);
+  };
+  const handleAddCategory = (c: Category) => {
+      setCategories(prev => [...prev, c]);
+      syncToSupabase('categories', c);
+  };
+  const handleDeleteCategory = (id: string) => {
+      setCategories(prev => prev.filter(c => c.id !== id));
+      syncToSupabase('categories', id, true);
+  };
+  const handleAddLocation = (loc: GeoLocation) => {
+      setLocations(prev => [...prev, loc]);
+      syncToSupabase('locations', loc);
+  };
+  const handleDeleteLocation = (id: string) => {
+      setLocations(prev => prev.filter(l => l.id !== id));
+      syncToSupabase('locations', id, true);
+  };
   const handleResetLocations = () => setLocations(MOCK_LOCATIONS);
-  const handleAddUser = (u: SystemUser) => setUsers(prev => [...prev, u]);
-  const handleUpdateUser = (u: SystemUser) => setUsers(prev => prev.map(usr => usr.id === u.id ? u : usr));
-  const handleDeleteUser = (id: string) => setUsers(prev => prev.filter(u => u.id !== id));
-  const handleAddBankAccount = (b: BankAccount) => setBankAccounts(prev => [...prev, b]);
-  const handleUpdateBankAccount = (b: BankAccount) => setBankAccounts(prev => prev.map(bk => bk.id === b.id ? b : bk));
-  const handleDeleteBankAccount = (id: string) => setBankAccounts(prev => prev.filter(b => b.id !== id));
+  const handleAddUser = (u: SystemUser) => {
+      setUsers(prev => [...prev, u]);
+      syncToSupabase('users', u);
+  };
+  const handleUpdateUser = (u: SystemUser) => {
+      setUsers(prev => prev.map(usr => usr.id === u.id ? u : usr));
+      syncToSupabase('users', u);
+  };
+  const handleDeleteUser = (id: string) => {
+      setUsers(prev => prev.filter(u => u.id !== id));
+      syncToSupabase('users', id, true);
+  };
+  const handleAddBankAccount = (b: BankAccount) => {
+      setBankAccounts(prev => [...prev, b]);
+      syncToSupabase('bank_accounts', b);
+  };
+  const handleUpdateBankAccount = (b: BankAccount) => {
+      setBankAccounts(prev => prev.map(bk => bk.id === b.id ? b : bk));
+      syncToSupabase('bank_accounts', b);
+  };
+  const handleDeleteBankAccount = (id: string) => {
+      setBankAccounts(prev => prev.filter(b => b.id !== id));
+      syncToSupabase('bank_accounts', id, true);
+  };
   
   // NEW: Update Wallet Balance AND Record Cash Movement
   const handleUpdateClientBalance = (clientId: string, amountChange: number, reason: string, paymentMethod: any, accountId?: string) => {
@@ -778,7 +1041,12 @@ const App = () => {
       const client = clients.find(c => c.id === clientId);
       const clientName = client ? client.name : 'CLIENTE';
 
-      setClients(prev => prev.map(c => c.id === clientId ? { ...c, digitalBalance: c.digitalBalance + amountChange } : c));
+      setClients(prev => {
+          const newClients = prev.map(c => c.id === clientId ? { ...c, digitalBalance: c.digitalBalance + amountChange } : c);
+          const updatedClient = newClients.find(c => c.id === clientId);
+          if (updatedClient) syncToSupabase('clients', updatedClient);
+          return newClients;
+      });
       
       const type = amountChange > 0 ? 'Ingreso' : 'Egreso';
       const absAmount = Math.abs(amountChange);
@@ -803,6 +1071,7 @@ const App = () => {
 
       // Functional update to avoid losing data if called in parallel with other cash updates
       setCashMovements(prev => [movement, ...prev]);
+      syncToSupabase('cash_movements', movement);
   };
 
   const handleUniversalTransfer = (from: string, to: string, amount: number, rate: number, ref: string, op: string) => {
@@ -866,6 +1135,7 @@ const App = () => {
           tenantId: m.tenantId || session?.businessName || 'SapiSoft Demo'
       };
       setCashMovements(prev => [enrichedMovement, ...prev]);
+      syncToSupabase('cash_movements', enrichedMovement);
   };
   const handleAddQuotation = (q: Quotation) => {
       const enrichedQuotation = {
@@ -875,8 +1145,12 @@ const App = () => {
           branchId: q.branchId || currentBranchId
       };
       setQuotations(prev => [enrichedQuotation, ...prev]);
+      syncToSupabase('quotations', enrichedQuotation);
   };
-  const handleDeleteQuotation = (id: string) => setQuotations(prev => prev.filter(q => q.id !== id));
+  const handleDeleteQuotation = (id: string) => {
+      setQuotations(prev => prev.filter(q => q.id !== id));
+      syncToSupabase('quotations', id, true);
+  };
   const handleLoadQuotation = (q: Quotation) => {
       setCart(q.items);
       if (q.clientName) {
@@ -893,24 +1167,55 @@ const App = () => {
           branchId: p.branchId || currentBranchId
       };
       setPresales(prev => [enrichedPresale, ...prev]);
+      syncToSupabase('presales', enrichedPresale);
   };
-  const handleDeletePresale = (id: string) => setPresales(prev => prev.filter(p => p.id !== id));
+  const handleDeletePresale = (id: string) => {
+      setPresales(prev => prev.filter(p => p.id !== id));
+      syncToSupabase('presales', id, true);
+  };
   const handleLoadPresale = (p: Presale) => { alert("Procesando entrega de preventa " + p.id); };
   const handleProcessCreditNote = (originalSaleId: string, itemsToReturn: { itemId: string, quantity: number }[], totalRefund: number, breakdown: PaymentBreakdown, detailedRefunds?: any[]) => {
       alert("Nota de crédito procesada por S/ " + totalRefund);
   };
-  const handleProcessInventorySession = (s: InventoryHistorySession) => setInventoryHistory(prev => [s, ...prev]);
+  const handleProcessInventorySession = (s: InventoryHistorySession) => {
+      setInventoryHistory(prev => [s, ...prev]);
+      syncToSupabase('inventory_sessions', s);
+  };
   const handleCloneBranch = (sourceId: string, newName: string) => {
       const newBranch: Branch = { id: 'BR-' + Date.now(), name: newName, address: '', isMain: false };
       setBranches(prev => [...prev, newBranch]);
+      syncToSupabase('branches', newBranch);
   };
   const handleSwitchBranch = (id: string) => setCurrentBranchId(id);
-  const handleAddBranch = (name: string, address: string, phone: string) => setBranches(prev => [...prev, { id: 'BR-' + Date.now(), name, address, phone, isMain: false }]);
-  const handleUpdateBranch = (b: Branch) => setBranches(prev => prev.map(br => br.id === b.id ? b : br));
-  const handleDeleteBranch = (id: string) => setBranches(prev => prev.filter(b => b.id !== id));
-  const handleAddTenant = (t: Tenant) => setTenants(prev => [...prev, t]);
-  const handleUpdateTenant = (id: string, updates: Partial<Tenant>) => setTenants(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
-  const handleDeleteTenant = (id: string) => setTenants(prev => prev.filter(t => t.id !== id));
+  const handleAddBranch = (name: string, address: string, phone: string) => {
+      const newBranch = { id: 'BR-' + Date.now(), name, address, phone, isMain: false };
+      setBranches(prev => [...prev, newBranch]);
+      syncToSupabase('branches', newBranch);
+  };
+  const handleUpdateBranch = (b: Branch) => {
+      setBranches(prev => prev.map(br => br.id === b.id ? b : br));
+      syncToSupabase('branches', b);
+  };
+  const handleDeleteBranch = (id: string) => {
+      setBranches(prev => prev.filter(b => b.id !== id));
+      syncToSupabase('branches', id, true);
+  };
+  const handleAddTenant = (t: Tenant) => {
+      setTenants(prev => [...prev, t]);
+      syncToSupabase('tenants', t);
+  };
+  const handleUpdateTenant = (id: string, updates: Partial<Tenant>) => {
+      setTenants(prev => {
+          const newTenants = prev.map(t => t.id === id ? { ...t, ...updates } : t);
+          const updatedTenant = newTenants.find(t => t.id === id);
+          if (updatedTenant) syncToSupabase('tenants', updatedTenant);
+          return newTenants;
+      });
+  };
+  const handleDeleteTenant = (id: string) => {
+      setTenants(prev => prev.filter(t => t.id !== id));
+      syncToSupabase('tenants', id, true);
+  };
   const handleResetTenantData = (id: string) => alert("Datos reseteados para tenant " + id);
   const handleSyncDownload = (data: any) => {
       if (data.isSupabaseActive) {
@@ -946,6 +1251,8 @@ const App = () => {
       currentBranchId={currentBranchId}
       onSwitchBranch={handleSwitchBranch}
       onCreateBranch={(name, addr) => handleAddBranch(name, addr, '')}
+      isOffline={isOffline}
+      pendingSyncCount={pendingSyncCount}
     >
       {currentView === ViewState.DASHBOARD && (
         <Dashboard 
@@ -1049,35 +1356,52 @@ const App = () => {
       {currentView === ViewState.SYSTEM_DIAGNOSTICS && <SystemDiagnosticsModule products={products} cashMovements={cashMovements} stockMovements={stockMovements} onAddCashMovement={handleAddMovement} onAddProduct={handleAddProduct} onProcessSale={handleProcessSale} onProcessPurchase={handleProcessPurchase} onProcessCreditNote={handleProcessCreditNote} onAddService={handleAddService} currentBranchId={currentBranchId} />}
       {currentView === ViewState.GATEWAY_CONFIG && <GatewayConfigModule />}
       {currentView === ViewState.BRANCH_MANAGEMENT && <BranchManagementModule branches={branches} onAddBranch={handleAddBranch} onUpdateBranch={handleUpdateBranch} onDeleteBranch={handleDeleteBranch} onCloneBranch={handleCloneBranch} onSwitchBranch={handleSwitchBranch} currentBranchId={currentBranchId} />}
-      {currentView === ViewState.WAREHOUSE_TRANSFER && <WarehouseTransferModule branches={branches} currentBranchId={currentBranchId} products={products} onProcessTransfer={(t) => setWarehouseTransfers(prev => [t, ...prev])} onConfirmTransfer={(t) => {
+      {currentView === ViewState.WAREHOUSE_TRANSFER && <WarehouseTransferModule branches={branches} currentBranchId={currentBranchId} products={products} onProcessTransfer={(t) => {
+              setWarehouseTransfers(prev => [t, ...prev]);
+              syncToSupabase('warehouse_transfers', t);
+          }} onConfirmTransfer={(t) => {
               const updated = { ...t, status: 'COMPLETED' as const };
               setWarehouseTransfers(prev => prev.map(tr => tr.id === t.id ? updated : tr));
+              syncToSupabase('warehouse_transfers', updated);
               const newMoves: StockMovement[] = t.items.map(i => {
                   const prod = products.find(p => p.id === i.productId);
                   const currentStock = (prod?.stock || 0) + i.quantity; // Note: using closure product, ideally should batch update products too
                   return { id: 'MOV-' + Date.now() + Math.random(), branchId: currentBranchId, date: new Date().toLocaleDateString('es-PE'), time: new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false }), productId: i.productId, productName: i.productName, type: 'ENTRADA', quantity: i.quantity, currentStock: currentStock, reference: `TRASPASO RECIBIDO #${t.id}`, user: session?.user.fullName || 'Admin' };
               });
               setStockMovements(prev => [...newMoves, ...prev]);
+              syncToSupabase('stock_movements', newMoves);
               
               // Also update products stock
+              const updatedProducts: Product[] = [];
               setProducts(prevProds => {
                   const newProds = [...prevProds];
                   t.items.forEach(i => {
                       const idx = newProds.findIndex(p => p.id === i.productId);
                       if (idx !== -1) {
                           newProds[idx] = { ...newProds[idx], stock: newProds[idx].stock + i.quantity };
+                          updatedProducts.push(newProds[idx]);
                       }
                   });
                   return newProds;
               });
+              if (updatedProducts.length > 0) {
+                  syncToSupabase('products', updatedProducts);
+              }
 
-          }} onRejectTransfer={(t) => setWarehouseTransfers(prev => prev.map(tr => tr.id === t.id ? { ...tr, status: 'REJECTED' } : tr))} history={warehouseTransfers} quotations={presales} />}
+          }} onRejectTransfer={(t) => {
+              const updated = { ...t, status: 'REJECTED' as const };
+              setWarehouseTransfers(prev => prev.map(tr => tr.id === t.id ? updated : tr));
+              syncToSupabase('warehouse_transfers', updated);
+          }} history={warehouseTransfers} quotations={presales} />}
       {currentView === ViewState.CASH_TRANSFERS && <CashTransferModule bankAccounts={bankAccounts} movements={cashMovements} requests={cashTransferRequests} branches={branches} currentBranchId={currentBranchId} onInitiateTransfer={(from, to, amount, rate, ref, op, targetBranchId) => {
               const req: CashTransferRequest = { id: 'REQ-' + Date.now(), date: new Date().toLocaleDateString('es-PE'), time: new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false }), fromBranchId: currentBranchId, fromBranchName: branches.find(b => b.id === currentBranchId)?.name || '', toBranchId: targetBranchId, toBranchName: branches.find(b => b.id === targetBranchId)?.name || '', amount, currency: baseCurrency, status: 'PENDING', user: session?.user.fullName || 'Admin', notes: ref };
               setCashTransferRequests(prev => [req, ...prev]);
+              syncToSupabase('cash_transfer_requests', req);
               handleAddMovement({ id: 'M-' + Date.now(), branchId: currentBranchId, date: req.date, time: req.time, type: 'Egreso', paymentMethod: 'Efectivo', concept: `TRASPASO A ${req.toBranchName}`, amount: amount, user: session?.user.fullName || 'Admin', category: 'TRANSFERENCIA SALIENTE', financialType: 'Variable' });
           }} onConfirmTransfer={(req) => {
-              setCashTransferRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'COMPLETED' } : r));
+              const updated = { ...req, status: 'COMPLETED' as const };
+              setCashTransferRequests(prev => prev.map(r => r.id === req.id ? updated : r));
+              syncToSupabase('cash_transfer_requests', updated);
               handleAddMovement({ id: 'M-' + Date.now(), branchId: currentBranchId, date: new Date().toLocaleDateString('es-PE'), time: new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false }), type: 'Ingreso', paymentMethod: 'Efectivo', concept: `RECEPCIÓN DE ${req.fromBranchName}`, amount: req.amount, user: session?.user.fullName || 'Admin', category: 'TRANSFERENCIA ENTRANTE', financialType: 'Variable' });
           }} systemBaseCurrency={baseCurrency} isCashBoxOpen={!!currentCashSession} />}
       {currentView === ViewState.INVENTORY_ADJUSTMENT && <InventoryAdjustmentModule products={products} salesHistory={sales} onProcessInventorySession={handleProcessInventorySession} sessionUser={session?.user?.fullName || 'Admin'} history={inventoryHistory} />}
