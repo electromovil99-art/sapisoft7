@@ -44,7 +44,7 @@ const tableDefinitions = [
     { name: "master_movements", desc: "Movimientos financieros del Super Admin" }
 ];
 
-const DatabaseModule: React.FC<DatabaseModuleProps> = ({ isSyncEnabled }) => {
+const DatabaseModule: React.FC<DatabaseModuleProps> = ({ isSyncEnabled, data, onSyncDownload }) => {
     const [supabaseUrl, setSupabaseUrl] = useState('');
     const [supabaseKey, setSupabaseKey] = useState('');
     const [status, setStatus] = useState<'DISCONNECTED' | 'CONNECTED' | 'ERROR'>('DISCONNECTED');
