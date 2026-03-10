@@ -163,51 +163,85 @@ const DatabaseModule: React.FC<DatabaseModuleProps> = ({ isSyncEnabled, data, on
         try {
             const supabase = createClient(supabaseUrl, supabaseKey);
             const schemaSQL = `
+                -- Drop existing tables to recreate with camelCase columns
+                DROP TABLE IF EXISTS public.tenants CASCADE;
+                DROP TABLE IF EXISTS public.system_users CASCADE;
+                DROP TABLE IF EXISTS public.products CASCADE;
+                DROP TABLE IF EXISTS public.clients CASCADE;
+                DROP TABLE IF EXISTS public.sales CASCADE;
+                DROP TABLE IF EXISTS public.purchases CASCADE;
+                DROP TABLE IF EXISTS public.cash_movements CASCADE;
+                DROP TABLE IF EXISTS public.service_orders CASCADE;
+                DROP TABLE IF EXISTS public.suppliers CASCADE;
+                DROP TABLE IF EXISTS public.brands CASCADE;
+                DROP TABLE IF EXISTS public.categories CASCADE;
+                DROP TABLE IF EXISTS public.bank_accounts CASCADE;
+                DROP TABLE IF EXISTS public.branches CASCADE;
+                DROP TABLE IF EXISTS public.warehouse_transfers CASCADE;
+                DROP TABLE IF EXISTS public.stock_movements CASCADE;
+                DROP TABLE IF EXISTS public.inventory_history CASCADE;
+                DROP TABLE IF EXISTS public.quotations CASCADE;
+                DROP TABLE IF EXISTS public.presales CASCADE;
+                DROP TABLE IF EXISTS public.cash_box_sessions CASCADE;
+                DROP TABLE IF EXISTS public.cash_transfer_requests CASCADE;
+                DROP TABLE IF EXISTS public.fixed_expenses CASCADE;
+                DROP TABLE IF EXISTS public.fixed_incomes CASCADE;
+                DROP TABLE IF EXISTS public.crm_contacts CASCADE;
+                DROP TABLE IF EXISTS public.crm_stages CASCADE;
+                DROP TABLE IF EXISTS public.ai_sources CASCADE;
+                DROP TABLE IF EXISTS public.ai_config CASCADE;
+                DROP TABLE IF EXISTS public.ai_training_logs CASCADE;
+                DROP TABLE IF EXISTS public.broadcast_groups CASCADE;
+                DROP TABLE IF EXISTS public.broadcast_jobs CASCADE;
+                DROP TABLE IF EXISTS public.tenant_invoices CASCADE;
+                DROP TABLE IF EXISTS public.master_accounts CASCADE;
+                DROP TABLE IF EXISTS public.master_movements CASCADE;
+
                 -- Core ERP
-                CREATE TABLE IF NOT EXISTS public.tenants ( id TEXT PRIMARY KEY, company_name TEXT, industry TEXT, status TEXT, subscription_end TEXT, owner_name TEXT, phone TEXT, plan_type TEXT, base_currency TEXT, credit_balance NUMERIC );
-                CREATE TABLE IF NOT EXISTS public.system_users ( id TEXT PRIMARY KEY, username TEXT UNIQUE, full_name TEXT, email TEXT, "password" TEXT, "role" TEXT, active BOOLEAN, permissions TEXT[], company_name TEXT, industry TEXT, tenant_id TEXT );
-                CREATE TABLE IF NOT EXISTS public.products ( id TEXT PRIMARY KEY, code TEXT, name TEXT, category TEXT, price NUMERIC, cost NUMERIC, stock INTEGER, location TEXT, brand TEXT, min_stock INTEGER, max_stock INTEGER, stock_control_mode TEXT, status TEXT, price_tiers JSONB, tenant_id TEXT );
-                CREATE TABLE IF NOT EXISTS public.clients ( id TEXT PRIMARY KEY, name TEXT, dni TEXT, phone TEXT, email TEXT, address TEXT, district TEXT, province TEXT, department TEXT, credit_line NUMERIC, credit_used NUMERIC, total_purchases NUMERIC, last_purchase_date TEXT, payment_score INTEGER, tags TEXT[], digital_balance NUMERIC, tenant_id TEXT );
-                CREATE TABLE IF NOT EXISTS public.sales ( id TEXT PRIMARY KEY, global_id TEXT, correlative_id TEXT, tenant_id TEXT, branch_id TEXT, date TEXT, "time" TEXT, client_id TEXT, client_name TEXT, doc_type TEXT, total NUMERIC, currency TEXT, exchange_rate NUMERIC, items JSONB, payment_breakdown JSONB, detailed_payments JSONB, user_name TEXT, sunat_status TEXT, sunat_response TEXT, sunat_hash TEXT );
-                CREATE TABLE IF NOT EXISTS public.purchases ( id TEXT PRIMARY KEY, global_id TEXT, correlative_id TEXT, tenant_id TEXT, branch_id TEXT, date TEXT, "time" TEXT, supplier_id TEXT, supplier_name TEXT, doc_type TEXT, total NUMERIC, currency TEXT, exchange_rate NUMERIC, items JSONB, payment_condition TEXT, detailed_payments JSONB, user_name TEXT );
-                CREATE TABLE IF NOT EXISTS public.cash_movements ( id TEXT PRIMARY KEY, global_id TEXT, tenant_id TEXT, branch_id TEXT, date TEXT, "time" TEXT, type TEXT, payment_method TEXT, concept TEXT, reference_id TEXT, amount NUMERIC, user_name TEXT, related_items JSONB, financial_type TEXT, category TEXT, account_id TEXT, currency TEXT, accumulated_balance NUMERIC, sequential_id TEXT );
-                CREATE TABLE IF NOT EXISTS public.service_orders ( id TEXT PRIMARY KEY, global_id TEXT, correlative_id TEXT, tenant_id TEXT, branch_id TEXT, entry_date TEXT, entry_time TEXT, client_id TEXT, client TEXT, client_phone TEXT, device_model TEXT, issue TEXT, status TEXT, technician TEXT, receptionist TEXT, cost NUMERIC, used_products JSONB, exit_date TEXT, exit_time TEXT, color TEXT );
-                CREATE TABLE IF NOT EXISTS public.suppliers ( id TEXT PRIMARY KEY, name TEXT, ruc TEXT, phone TEXT, email TEXT, address TEXT, contact_name TEXT, digital_balance NUMERIC, tenant_id TEXT );
-                CREATE TABLE IF NOT EXISTS public.brands ( id TEXT PRIMARY KEY, name TEXT UNIQUE, tenant_id TEXT );
-                CREATE TABLE IF NOT EXISTS public.categories ( id TEXT PRIMARY KEY, name TEXT UNIQUE, tenant_id TEXT );
-                CREATE TABLE IF NOT EXISTS public.bank_accounts ( id TEXT PRIMARY KEY, bank_name TEXT, account_number TEXT, currency TEXT, alias TEXT, use_in_sales BOOLEAN, use_in_purchases BOOLEAN, tenant_id TEXT );
+                CREATE TABLE IF NOT EXISTS public.tenants ( id TEXT PRIMARY KEY, "companyName" TEXT, industry TEXT, status TEXT, "subscriptionEnd" TEXT, "ownerName" TEXT, phone TEXT, "planType" TEXT, "baseCurrency" TEXT, "creditBalance" NUMERIC );
+                CREATE TABLE IF NOT EXISTS public.system_users ( id TEXT PRIMARY KEY, username TEXT UNIQUE, "fullName" TEXT, email TEXT, "password" TEXT, "role" TEXT, active BOOLEAN, permissions TEXT[], "companyName" TEXT, industry TEXT, "tenantId" TEXT );
+                CREATE TABLE IF NOT EXISTS public.products ( id TEXT PRIMARY KEY, code TEXT, name TEXT, category TEXT, price NUMERIC, cost NUMERIC, stock INTEGER, location TEXT, brand TEXT, "minStock" INTEGER, "maxStock" INTEGER, "stockControlMode" TEXT, status TEXT, "priceTiers" JSONB, "tenantId" TEXT );
+                CREATE TABLE IF NOT EXISTS public.clients ( id TEXT PRIMARY KEY, name TEXT, dni TEXT, phone TEXT, email TEXT, address TEXT, district TEXT, province TEXT, department TEXT, "creditLine" NUMERIC, "creditUsed" NUMERIC, "totalPurchases" NUMERIC, "lastPurchaseDate" TEXT, "paymentScore" INTEGER, tags TEXT[], "digitalBalance" NUMERIC, "tenantId" TEXT );
+                CREATE TABLE IF NOT EXISTS public.sales ( id TEXT PRIMARY KEY, "globalId" TEXT, "correlativeId" TEXT, "tenantId" TEXT, "branchId" TEXT, date TEXT, "time" TEXT, "clientId" TEXT, "clientName" TEXT, "docType" TEXT, total NUMERIC, currency TEXT, "exchangeRate" NUMERIC, items JSONB, "paymentBreakdown" JSONB, "detailedPayments" JSONB, "user" TEXT, "sunatStatus" TEXT, "sunatResponse" TEXT, "sunatHash" TEXT );
+                CREATE TABLE IF NOT EXISTS public.purchases ( id TEXT PRIMARY KEY, "globalId" TEXT, "correlativeId" TEXT, "tenantId" TEXT, "branchId" TEXT, date TEXT, "time" TEXT, "supplierId" TEXT, "supplierName" TEXT, "docType" TEXT, total NUMERIC, currency TEXT, "exchangeRate" NUMERIC, items JSONB, "paymentCondition" TEXT, "detailedPayments" JSONB, "user" TEXT );
+                CREATE TABLE IF NOT EXISTS public.cash_movements ( id TEXT PRIMARY KEY, "globalId" TEXT, "tenantId" TEXT, "branchId" TEXT, date TEXT, "time" TEXT, type TEXT, "paymentMethod" TEXT, concept TEXT, "referenceId" TEXT, amount NUMERIC, "user" TEXT, "relatedItems" JSONB, "financialType" TEXT, category TEXT, "accountId" TEXT, currency TEXT, "accumulatedBalance" NUMERIC, "sequentialId" TEXT );
+                CREATE TABLE IF NOT EXISTS public.service_orders ( id TEXT PRIMARY KEY, "globalId" TEXT, "correlativeId" TEXT, "tenantId" TEXT, "branchId" TEXT, "entryDate" TEXT, "entryTime" TEXT, "clientId" TEXT, client TEXT, "clientPhone" TEXT, "deviceModel" TEXT, issue TEXT, status TEXT, technician TEXT, receptionist TEXT, cost NUMERIC, "usedProducts" JSONB, "exitDate" TEXT, "exitTime" TEXT, color TEXT );
+                CREATE TABLE IF NOT EXISTS public.suppliers ( id TEXT PRIMARY KEY, name TEXT, ruc TEXT, phone TEXT, email TEXT, address TEXT, "contactName" TEXT, "digitalBalance" NUMERIC, "tenantId" TEXT );
+                CREATE TABLE IF NOT EXISTS public.brands ( id TEXT PRIMARY KEY, name TEXT UNIQUE, "tenantId" TEXT );
+                CREATE TABLE IF NOT EXISTS public.categories ( id TEXT PRIMARY KEY, name TEXT UNIQUE, "tenantId" TEXT );
+                CREATE TABLE IF NOT EXISTS public.bank_accounts ( id TEXT PRIMARY KEY, "bankName" TEXT, "accountNumber" TEXT, currency TEXT, alias TEXT, "useInSales" BOOLEAN, "useInPurchases" BOOLEAN, "tenantId" TEXT );
 
                 -- Branches & Inventory
-                CREATE TABLE IF NOT EXISTS public.branches ( id TEXT PRIMARY KEY, name TEXT, address TEXT, phone TEXT, is_main BOOLEAN, tenant_id TEXT );
-                CREATE TABLE IF NOT EXISTS public.warehouse_transfers ( id TEXT PRIMARY KEY, date TEXT, "time" TEXT, from_branch_id TEXT, to_branch_id TEXT, from_branch_name TEXT, to_branch_name TEXT, items JSONB, status TEXT, user_name TEXT, notes TEXT, currency TEXT, amount NUMERIC, tenant_id TEXT );
-                CREATE TABLE IF NOT EXISTS public.stock_movements ( id TEXT PRIMARY KEY, global_id TEXT, tenant_id TEXT, branch_id TEXT, date TEXT, "time" TEXT, product_id TEXT, product_name TEXT, type TEXT, quantity NUMERIC, current_stock NUMERIC, reference TEXT, user_name TEXT, unit_cost NUMERIC );
-                CREATE TABLE IF NOT EXISTS public.inventory_history ( id TEXT PRIMARY KEY, date TEXT, "time" TEXT, user_name TEXT, status TEXT, items JSONB, tenant_id TEXT );
+                CREATE TABLE IF NOT EXISTS public.branches ( id TEXT PRIMARY KEY, name TEXT, address TEXT, phone TEXT, "isMain" BOOLEAN, "tenantId" TEXT );
+                CREATE TABLE IF NOT EXISTS public.warehouse_transfers ( id TEXT PRIMARY KEY, date TEXT, "time" TEXT, "fromBranchId" TEXT, "toBranchId" TEXT, "fromBranchName" TEXT, "toBranchName" TEXT, items JSONB, status TEXT, "user" TEXT, notes TEXT, currency TEXT, amount NUMERIC, "tenantId" TEXT );
+                CREATE TABLE IF NOT EXISTS public.stock_movements ( id TEXT PRIMARY KEY, "globalId" TEXT, "tenantId" TEXT, "branchId" TEXT, date TEXT, "time" TEXT, "productId" TEXT, "productName" TEXT, type TEXT, quantity NUMERIC, "currentStock" NUMERIC, reference TEXT, "user" TEXT, "unitCost" NUMERIC );
+                CREATE TABLE IF NOT EXISTS public.inventory_history ( id TEXT PRIMARY KEY, date TEXT, "time" TEXT, "user" TEXT, status TEXT, items JSONB, "tenantId" TEXT );
 
                 -- Sales Advanced
-                CREATE TABLE IF NOT EXISTS public.quotations ( id TEXT PRIMARY KEY, global_id TEXT, correlative_id TEXT, tenant_id TEXT, branch_id TEXT, date TEXT, "time" TEXT, client_id TEXT, client_name TEXT, items JSONB, total NUMERIC );
-                CREATE TABLE IF NOT EXISTS public.presales ( id TEXT PRIMARY KEY, global_id TEXT, correlative_id TEXT, tenant_id TEXT, branch_id TEXT, date TEXT, "time" TEXT, delivery_date TEXT, client_id TEXT, client_name TEXT, items JSONB, total NUMERIC, status TEXT );
+                CREATE TABLE IF NOT EXISTS public.quotations ( id TEXT PRIMARY KEY, "globalId" TEXT, "correlativeId" TEXT, "tenantId" TEXT, "branchId" TEXT, date TEXT, "time" TEXT, "clientId" TEXT, "clientName" TEXT, items JSONB, total NUMERIC );
+                CREATE TABLE IF NOT EXISTS public.presales ( id TEXT PRIMARY KEY, "globalId" TEXT, "correlativeId" TEXT, "tenantId" TEXT, "branchId" TEXT, date TEXT, "time" TEXT, "deliveryDate" TEXT, "clientId" TEXT, "clientName" TEXT, items JSONB, total NUMERIC, status TEXT );
 
                 -- Cash Advanced
-                CREATE TABLE IF NOT EXISTS public.cash_box_sessions ( id TEXT PRIMARY KEY, branch_id TEXT, opening_date TEXT, closing_date TEXT, opening_user TEXT, closing_user TEXT, status TEXT, expected_opening NUMERIC, counted_opening NUMERIC, opening_difference NUMERIC, opening_notes TEXT, confirmed_digital_at_open JSONB, expected_cash_at_close NUMERIC, counted_cash_at_close NUMERIC, cash_difference_at_close NUMERIC, expected_digital_at_close NUMERIC, confirmed_digital_at_close JSONB, closing_notes TEXT, tenant_id TEXT );
-                CREATE TABLE IF NOT EXISTS public.cash_transfer_requests ( id TEXT PRIMARY KEY, date TEXT, "time" TEXT, from_branch_id TEXT, from_branch_name TEXT, to_branch_id TEXT, to_branch_name TEXT, amount NUMERIC, currency TEXT, status TEXT, user_name TEXT, notes TEXT, tenant_id TEXT );
-                CREATE TABLE IF NOT EXISTS public.fixed_expenses ( id TEXT PRIMARY KEY, name TEXT, tenant_id TEXT );
-                CREATE TABLE IF NOT EXISTS public.fixed_incomes ( id TEXT PRIMARY KEY, name TEXT, tenant_id TEXT );
+                CREATE TABLE IF NOT EXISTS public.cash_box_sessions ( id TEXT PRIMARY KEY, "branchId" TEXT, "openingDate" TEXT, "closingDate" TEXT, "openingUser" TEXT, "closingUser" TEXT, status TEXT, "expectedOpening" NUMERIC, "countedOpening" NUMERIC, "openingDifference" NUMERIC, "openingNotes" TEXT, "confirmedDigitalAtOpen" JSONB, "expectedCashAtClose" NUMERIC, "countedCashAtClose" NUMERIC, "cashDifferenceAtClose" NUMERIC, "expectedDigitalAtClose" NUMERIC, "confirmedDigitalAtClose" JSONB, "closingNotes" TEXT, "tenantId" TEXT );
+                CREATE TABLE IF NOT EXISTS public.cash_transfer_requests ( id TEXT PRIMARY KEY, date TEXT, "time" TEXT, "fromBranchId" TEXT, "fromBranchName" TEXT, "toBranchId" TEXT, "toBranchName" TEXT, amount NUMERIC, currency TEXT, status TEXT, "user" TEXT, notes TEXT, "tenantId" TEXT );
+                CREATE TABLE IF NOT EXISTS public.fixed_expenses ( id TEXT PRIMARY KEY, name TEXT, "tenantId" TEXT );
+                CREATE TABLE IF NOT EXISTS public.fixed_incomes ( id TEXT PRIMARY KEY, name TEXT, "tenantId" TEXT );
 
                 -- CRM & Marketing
-                CREATE TABLE IF NOT EXISTS public.crm_contacts ( id TEXT PRIMARY KEY, name TEXT, phone TEXT, stage TEXT, labels JSONB, notes JSONB, email TEXT, address TEXT, last_interaction TEXT, next_follow_up TEXT, value NUMERIC, assigned_agent TEXT, tenant_id TEXT );
-                CREATE TABLE IF NOT EXISTS public.crm_stages ( id TEXT PRIMARY KEY, name TEXT, color TEXT, "order" INTEGER, tenant_id TEXT );
+                CREATE TABLE IF NOT EXISTS public.crm_contacts ( id TEXT PRIMARY KEY, name TEXT, phone TEXT, stage TEXT, labels JSONB, notes JSONB, email TEXT, address TEXT, "lastInteraction" TEXT, "nextFollowUp" TEXT, value NUMERIC, "assignedAgent" TEXT, "tenantId" TEXT );
+                CREATE TABLE IF NOT EXISTS public.crm_stages ( id TEXT PRIMARY KEY, name TEXT, color TEXT, "order" INTEGER, "tenantId" TEXT );
 
                 -- AI & WhatsApp
-                CREATE TABLE IF NOT EXISTS public.ai_sources ( id TEXT PRIMARY KEY, name TEXT, type TEXT, content TEXT, status TEXT, date TEXT, size TEXT, tenant_id TEXT );
-                CREATE TABLE IF NOT EXISTS public.ai_config ( id TEXT PRIMARY KEY, assistant_name TEXT, description TEXT, model TEXT, temperature NUMERIC, system_instruction TEXT, enable_audio BOOLEAN, enable_images BOOLEAN, enable_agent_handoff BOOLEAN, handoff_message TEXT, tenant_id TEXT );
-                CREATE TABLE IF NOT EXISTS public.ai_training_logs ( id TEXT PRIMARY KEY, date TEXT, "time" TEXT, user_name TEXT, action TEXT, status TEXT, duration TEXT, tenant_id TEXT );
-                CREATE TABLE IF NOT EXISTS public.broadcast_groups ( id TEXT PRIMARY KEY, name TEXT, contacts JSONB, tenant_id TEXT );
-                CREATE TABLE IF NOT EXISTS public.broadcast_jobs ( id TEXT PRIMARY KEY, scheduled_date TEXT, scheduled_time TEXT, recipients JSONB, message TEXT, media_data JSONB, delay INTEGER, status TEXT, tenant_id TEXT );
+                CREATE TABLE IF NOT EXISTS public.ai_sources ( id TEXT PRIMARY KEY, name TEXT, type TEXT, content TEXT, status TEXT, date TEXT, size TEXT, "tenantId" TEXT );
+                CREATE TABLE IF NOT EXISTS public.ai_config ( id TEXT PRIMARY KEY, "assistantName" TEXT, description TEXT, model TEXT, temperature NUMERIC, "systemInstruction" TEXT, "enableAudio" BOOLEAN, "enableImages" BOOLEAN, "enableAgentHandoff" BOOLEAN, "handoffMessage" TEXT, "tenantId" TEXT );
+                CREATE TABLE IF NOT EXISTS public.ai_training_logs ( id TEXT PRIMARY KEY, date TEXT, "time" TEXT, "user" TEXT, action TEXT, status TEXT, duration TEXT, "tenantId" TEXT );
+                CREATE TABLE IF NOT EXISTS public.broadcast_groups ( id TEXT PRIMARY KEY, name TEXT, contacts JSONB, "tenantId" TEXT );
+                CREATE TABLE IF NOT EXISTS public.broadcast_jobs ( id TEXT PRIMARY KEY, "scheduledDate" TEXT, "scheduledTime" TEXT, recipients JSONB, message TEXT, "mediaData" JSONB, delay INTEGER, status TEXT, "tenantId" TEXT );
 
                 -- Super Admin (SaaS)
-                CREATE TABLE IF NOT EXISTS public.tenant_invoices ( id TEXT PRIMARY KEY, tenant_id TEXT, tenant_name TEXT, date TEXT, due_date TEXT, amount NUMERIC, credit_applied NUMERIC, net_amount NUMERIC, status TEXT, plan_type TEXT );
+                CREATE TABLE IF NOT EXISTS public.tenant_invoices ( id TEXT PRIMARY KEY, "tenantId" TEXT, "tenantName" TEXT, date TEXT, "dueDate" TEXT, amount NUMERIC, "creditApplied" NUMERIC, "netAmount" NUMERIC, status TEXT, "planType" TEXT );
                 CREATE TABLE IF NOT EXISTS public.master_accounts ( id TEXT PRIMARY KEY, name TEXT, type TEXT, currency TEXT, balance NUMERIC );
-                CREATE TABLE IF NOT EXISTS public.master_movements ( id TEXT PRIMARY KEY, date TEXT, "time" TEXT, type TEXT, account_id TEXT, account_name TEXT, amount NUMERIC, concept TEXT, tenant_id TEXT, reference TEXT );
+                CREATE TABLE IF NOT EXISTS public.master_movements ( id TEXT PRIMARY KEY, date TEXT, "time" TEXT, type TEXT, "accountId" TEXT, "accountName" TEXT, amount NUMERIC, concept TEXT, "tenantId" TEXT, reference TEXT );
             `;
             
             const { error } = await supabase.rpc('execute_sql', { sql: schemaSQL });
