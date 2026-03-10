@@ -75,7 +75,7 @@ const App = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isSyncEnabled, setIsSyncEnabled] = useState(() => {
     const saved = localStorage.getItem('isSyncEnabled');
-    return saved ? JSON.parse(saved) : false;
+    return saved !== null ? JSON.parse(saved) : true;
   });
 
   const toggleSyncMode = () => {
