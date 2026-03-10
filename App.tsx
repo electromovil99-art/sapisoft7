@@ -73,7 +73,18 @@ const App = () => {
   const [currentView, setCurrentView] = useState<ViewState>(ViewState.DASHBOARD);
   const [activeMobileCategory, setActiveMobileCategory] = useState<string | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const [isSyncEnabled, setIsSyncEnabled] = useState(false);
+  const [isSyncEnabled, setIsSyncEnabled] = useState(() => {
+    const saved = localStorage.getItem('isSyncEnabled');
+    return saved ? JSON.parse(saved) : false;
+  });
+
+  const toggleSyncMode = () => {
+    setIsSyncEnabled((prev: boolean) => {
+      const newValue = !prev;
+      localStorage.setItem('isSyncEnabled', JSON.stringify(newValue));
+      return newValue;
+    });
+  };
 
   // --- DATA STATE ---
   const [products, setProducts] = useState<Product[]>([...TECH_PRODUCTS, ...PHARMA_PRODUCTS]);
@@ -930,7 +941,7 @@ const App = () => {
       session={session}
       onLogout={handleLogout}
       isSyncEnabled={isSyncEnabled}
-      toggleSyncMode={() => setIsSyncEnabled(!isSyncEnabled)}
+      toggleSyncMode={toggleSyncMode}
       branches={branches}
       currentBranchId={currentBranchId}
       onSwitchBranch={handleSwitchBranch}

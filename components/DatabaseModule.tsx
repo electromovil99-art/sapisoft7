@@ -53,8 +53,8 @@ const DatabaseModule: React.FC<DatabaseModuleProps> = ({ isSyncEnabled }) => {
     const [tableStatuses, setTableStatuses] = useState<Record<string, boolean>>({});
 
     useEffect(() => {
-        const storedUrl = localStorage.getItem('supabase_url');
-        const storedKey = localStorage.getItem('supabase_key');
+        const storedUrl = localStorage.getItem('supabase_url') || import.meta.env.VITE_SUPABASE_URL || '';
+        const storedKey = localStorage.getItem('supabase_key') || import.meta.env.VITE_SUPABASE_KEY || '';
         if (storedUrl) setSupabaseUrl(storedUrl);
         if (storedKey) setSupabaseKey(storedKey);
         if (storedUrl && storedKey) checkConnection(storedUrl, storedKey);
