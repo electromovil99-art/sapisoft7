@@ -51,7 +51,8 @@ export enum ViewState {
   BRANCH_MANAGEMENT = 'BRANCH_MANAGEMENT',
   ACCOUNTS_RECEIVABLE = 'ACCOUNTS_RECEIVABLE',
   ACCOUNTS_PAYABLE = 'ACCOUNTS_PAYABLE',
-  AI_ASSISTANT = 'AI_ASSISTANT'
+  AI_ASSISTANT = 'AI_ASSISTANT',
+  SUNAT_BILLING = 'SUNAT_BILLING'
 }
 
 export type PaymentMethodType = 'Efectivo' | 'Yape' | 'Plin' | 'Yape/Plin' | 'Tarjeta' | 'Deposito' | 'Transferencia' | 'Saldo Favor';
@@ -200,6 +201,9 @@ export interface SaleRecord {
     paymentBreakdown: PaymentBreakdown;
     detailedPayments?: any[];
     user: string;
+    sunatStatus?: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'ERROR';
+    sunatResponse?: string;
+    sunatHash?: string;
 }
 
 export interface PurchaseRecord {

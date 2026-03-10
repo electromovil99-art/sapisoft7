@@ -3,7 +3,7 @@ import { ViewState } from './types';
 import { 
   ShoppingCart, Package, Wrench, 
   Wallet, Users, Activity, ShoppingBag, FolderCog, FileSearch, Truck, Landmark, BrainCircuit, 
-  Printer, Shield, FileMinus, CreditCard, Map, MessageCircle,
+  Printer, Shield, FileMinus, CreditCard, Map, MessageCircle, FileText,
   Database, Settings, BarChart3, ClipboardList, FileScan, FileBarChart, PieChart, Image as ImageIcon, History, Menu,
   TrendingDown, TrendingUp, Building2, Bug, ShieldCheck, SearchCode, Settings2, Zap, Store, ArrowRightLeft, Clock, KanbanSquare, HandCoins, Landmark as LandmarkIcon, Bot, Megaphone, Radio
 } from 'lucide-react';
@@ -23,6 +23,7 @@ export const INITIAL_NAV_STRUCTURE = [
       { view: ViewState.SERVICES, label: 'Serv. Tec', icon: Wrench, enabled: true },
       { view: ViewState.CLIENTS, label: 'Clientes', icon: Users, enabled: true },
       { view: ViewState.CREDIT_NOTE, label: 'N. de Credit', icon: FileMinus, enabled: true },
+      { view: ViewState.SUNAT_BILLING, label: 'F. Sunat', icon: FileText, enabled: true },
     ]
   },
   {

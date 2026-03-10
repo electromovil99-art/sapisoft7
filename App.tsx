@@ -42,6 +42,7 @@ import BroadcastModule from './components/BroadcastModule';
 import QuotationModule from './components/QuotationModule';
 import PresaleModule from './components/PresaleModule';
 import DatabaseModule from './components/DatabaseModule';
+import { SunatModule } from './components/SunatModule';
 import PrintConfigModule from './components/PrintConfigModule';
 import MediaEditorModule from './components/MediaEditorModule';
 import SuperAdminModule from './components/SuperAdminModule';
@@ -274,6 +275,19 @@ const App = () => {
   const handleDeleteProduct = (id: string) => setProducts(prev => prev.filter(p => p.id !== id));
   const handleAddProducts = (newProds: Product[]) => setProducts(prev => [...prev, ...newProds]);
 
+  const handleUpdateSaleSunatStatus = (ticketId: string, status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'ERROR', response: string) => {
+      setSales(prev => prev.map(s => s.id === ticketId ? { 
+          ...s, 
+          sunatStatus: status, 
+          sunatResponse: response,
+          sunatHash: status === 'ACCEPTED' ? `HASH-${Date.now()}-${Math.random().toString(36).substring(7)}` : s.sunatHash
+      } : s));
+  };
+
+  const handleUpdateSaleData = (ticketId: string, updates: Partial<SaleRecord>) => {
+      setSales(prev => prev.map(s => s.id === ticketId ? { ...s, ...updates } : s));
+  };
+
   const handleProcessSale = (cart: CartItem[], total: number, docType: string, clientName: string, paymentBreakdown: PaymentBreakdown, ticketId: string, detailedPayments: any[], currency: string, exchangeRate: number) => {
       // Generate Traceability IDs
       const globalId = generateTransactionId();
@@ -332,14 +346,14 @@ const App = () => {
 
               const movement: CashMovement = {
                   id: 'M-' + generateUUID(),
-                  globalId: generateTransactionId(), // Unique global ID
+                  globalId: globalId, // Use the SAME globalId as the sale to link them in traceability
                   tenantId: session?.businessName || 'SapiSoft Demo',
                   branchId: currentBranchId,
                   date: sale.date,
                   time: sale.time,
                   type: 'Ingreso',
                   paymentMethod: payment.method,
-                  concept: `VENTA ${docType} #${correlativeId}`,
+                  concept: `PAGO VENTA ${docType} #${correlativeId}`,
                   amount: payment.amount,
                   user: session?.user.fullName || 'Admin',
                   category: 'VENTA',
@@ -353,14 +367,14 @@ const App = () => {
       } else if (paymentBreakdown.cash > 0) {
            const m: CashMovement = {
               id: 'M-' + generateUUID(),
-              globalId: generateTransactionId(), // Unique global ID
+              globalId: globalId, // Use the SAME globalId as the sale
               tenantId: session?.businessName || 'SapiSoft Demo',
               branchId: currentBranchId,
               date: sale.date,
               time: sale.time,
               type: 'Ingreso',
               paymentMethod: 'Efectivo',
-              concept: `VENTA ${docType} #${correlativeId}`,
+              concept: `PAGO VENTA ${docType} #${correlativeId}`,
               amount: paymentBreakdown.cash,
               user: session?.user.fullName || 'Admin',
               category: 'VENTA',
@@ -888,6 +902,11 @@ const App = () => {
   const handleDeleteTenant = (id: string) => setTenants(prev => prev.filter(t => t.id !== id));
   const handleResetTenantData = (id: string) => alert("Datos reseteados para tenant " + id);
   const handleSyncDownload = (data: any) => {
+      if (data.isSupabaseActive) {
+          localStorage.setItem('isSupabaseActive', 'true');
+          alert("¡Guardado en la nube activado! A partir de ahora los datos se guardarán en Supabase.");
+          return;
+      }
       if (data.products) setProducts(data.products);
       if (data.clients) setClients(data.clients);
       alert("Datos sincronizados desde la nube.");
@@ -934,6 +953,10 @@ const App = () => {
       
       {currentView === ViewState.POS && (
         <SalesModule products={products} clients={clients} categories={categories} purchasesHistory={purchases} stockMovements={stockMovements} bankAccounts={bankAccounts} locations={locations} onAddClient={handleAddClient} onProcessSale={handleProcessSale} cart={cart} setCart={setCart} client={posClient} setClient={setPosClient} quotations={quotations} onLoadQuotation={handleLoadQuotation} onAddQuotation={handleAddQuotation} onAddPresale={handleAddPresale} systemBaseCurrency={baseCurrency} branches={branches} currentBranchId={currentBranchId} onNavigate={handleNavigate} onUpdateClientBalance={handleUpdateClientBalance} isCashBoxOpen={!!currentCashSession} />
+      )}
+
+      {currentView === ViewState.SUNAT_BILLING && (
+        <SunatModule sales={sales} onUpdateSaleSunatStatus={handleUpdateSaleSunatStatus} onUpdateSaleData={handleUpdateSaleData} />
       )}
 
       {currentView === ViewState.ACCOUNTS_RECEIVABLE && (
