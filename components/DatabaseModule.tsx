@@ -111,28 +111,28 @@ const DatabaseModule: React.FC<DatabaseModuleProps> = ({ isSyncEnabled }) => {
             const supabase = createClient(supabaseUrl, supabaseKey);
             
             // Migrate Products
-            if (data.products && data.products.length > 0) {
+            if (data?.products && data.products.length > 0) {
                 addLog(`Subiendo ${data.products.length} productos...`);
                 const { error } = await supabase.from('products').upsert(data.products);
                 if (error) throw error;
             }
 
             // Migrate Clients
-            if (data.clients && data.clients.length > 0) {
+            if (data?.clients && data.clients.length > 0) {
                 addLog(`Subiendo ${data.clients.length} clientes...`);
                 const { error } = await supabase.from('clients').upsert(data.clients);
                 if (error) throw error;
             }
 
             // Migrate Sales
-            if (data.sales && data.sales.length > 0) {
+            if (data?.sales && data.sales.length > 0) {
                 addLog(`Subiendo ${data.sales.length} ventas...`);
                 const { error } = await supabase.from('sales').upsert(data.sales);
                 if (error) throw error;
             }
 
             // Migrate Services
-            if (data.services && data.services.length > 0) {
+            if (data?.services && data.services.length > 0) {
                 addLog(`Subiendo ${data.services.length} órdenes de servicio...`);
                 const { error } = await supabase.from('service_orders').upsert(data.services);
                 if (error) throw error;
