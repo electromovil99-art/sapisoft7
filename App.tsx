@@ -345,9 +345,23 @@ const App = () => {
   const [chats, setChats] = useState<any[]>([]);
 
   const [currentCashSession, setCurrentCashSession] = useState<CashBoxSession | undefined>(undefined);
-  const [companyName, setCompanyName] = useState('Mi Empresa S.A.C.');
+  const [companyName, setCompanyName] = useState(() => {
+    const saved = localStorage.getItem('app_session');
+    if (saved) {
+      const session = JSON.parse(saved);
+      return session.businessName || 'Mi Empresa S.A.C.';
+    }
+    return 'Mi Empresa S.A.C.';
+  });
   const [companyLogo, setCompanyLogo] = useState<string | null>(null);
-  const [baseCurrency, setBaseCurrency] = useState('PEN');
+  const [baseCurrency, setBaseCurrency] = useState(() => {
+    const saved = localStorage.getItem('app_session');
+    if (saved) {
+      const session = JSON.parse(saved);
+      return session.baseCurrency || 'PEN';
+    }
+    return 'PEN';
+  });
   const [navStructure, setNavStructure] = useState(INITIAL_NAV_STRUCTURE);
   
   const [pendingClientData, setPendingClientData] = useState<{name: string, phone: string} | null>(null);

@@ -34,7 +34,7 @@ const LegalView = ({ title, content }: { title: string, content: React.ReactNode
     </div>
 );
 
-const PricingView = ({ onSelectPlan }: { onSelectPlan: (plan: string) => void }) => (
+const PricingView = () => (
     <div className="py-20 animate-in fade-in zoom-in-95 duration-500">
         <div className="text-center mb-16">
             <h2 className="text-4xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Nuestros Planes</h2>
@@ -61,9 +61,9 @@ const PricingView = ({ onSelectPlan }: { onSelectPlan: (plan: string) => void })
                             </li>
                         ))}
                     </ul>
-                    <button onClick={() => onSelectPlan(plan.name)} className={`w-full mt-12 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${plan.popular ? 'bg-primary text-white shadow-xl hover:bg-primary-dark' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'}`}>
-                        Empezar Ahora
-                    </button>
+                    <div className={`w-full mt-12 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all text-center ${plan.popular ? 'bg-primary text-white shadow-xl' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}`}>
+                        Plan seleccionado
+                    </div>
                 </div>
             ))}
         </div>
@@ -206,8 +206,6 @@ const FeaturesSection = () => (
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onResetPassword, users, tenants, heroImage, featureImage, videoTutorials }) => {
     const [currentPage, setCurrentPage] = useState<PublicPage>('HOME');
     const [showLoginModal, setShowLoginModal] = useState(false);
-    const [showCheckoutModal, setShowCheckoutModal] = useState(false);
-    const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
     
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
@@ -219,28 +217,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onResetPasswo
     useEffect(() => {
         window.scrollTo(0, 0);
     }, [currentPage]);
-
-    // *** CAMBIO: Nueva función de pago que no usa el componente blanco ***
-    const handleHelioPayment = () => {
-        const helio = (window as any).helioCheckout;
-        const checkoutUrl = "https://app.helio.xyz/pay/694f910c5fedc6e9c8cccce6";
-
-        if (helio) {
-            try {
-                helio({
-                    paylinkId: "694f910c5fedc6e9c8cccce6",
-                    network: 'mainnet',
-                    theme: {"themeMode":"dark"},
-                    primaryColor: "#6400CC",
-                    display: 'modal', 
-                });
-            } catch (e) {
-                window.open(checkoutUrl, '_blank');
-            }
-        } else {
-            window.open(checkoutUrl, '_blank');
-        }
-    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -273,14 +249,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onResetPasswo
         }, 800);
     };
 
-    const handleSelectPlan = (plan: string) => {
-        setSelectedPlan(plan);
-        setShowCheckoutModal(true);
-    };
-
     const renderContent = () => {
         switch(currentPage) {
-            case 'PRICING': return <PricingView onSelectPlan={handleSelectPlan} />;
+            case 'PRICING': return <PricingView />;
             case 'VIDEOS': return <TutorialsView videos={videoTutorials} />;
             case 'TERMS': return (
                 <LegalView title="Términos de Servicio" content={
@@ -482,33 +453,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onResetPasswo
                 </div>
             )}
 
-            {/* *** CAMBIO: MODAL HELIO REDISEÑADO PARA EVITAR PANEL BLANCO *** */}
-            {showCheckoutModal && (
-                <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-slate-950/95 backdrop-blur-xl animate-in fade-in" onClick={() => setShowCheckoutModal(false)}></div>
-                    <div className="relative w-full max-w-sm bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl overflow-y-auto max-h-[90vh] animate-in zoom-in-95 border border-white/10 flex flex-col">
-                        <div className="p-8 text-center">
-                            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-5">
-                                <ShieldCheck size={32} className="text-primary" />
-                            </div>
-                            <h3 className="text-xl font-black uppercase tracking-tighter dark:text-white">Plan {selectedPlan}</h3>
-                            <p className="text-slate-400 font-bold text-[9px] uppercase mt-1 mb-6 tracking-widest">Suscripción Segura vía Helio</p>
-                            
-                            <button 
-                                onClick={handleHelioPayment}
-                                className="w-full py-4 bg-primary text-white font-black rounded-xl shadow-lg hover:scale-105 transition-all uppercase tracking-widest text-[10px]"
-                            >
-                                ACTIVAR AHORA CON HELIO
-                            </button>
-
-                            <button onClick={() => setShowCheckoutModal(false)} className="mt-5 text-[9px] font-black text-slate-400 uppercase tracking-widest hover:text-primary transition-colors">Cancelar</button>
-                        </div>
-                        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 text-center shrink-0">
-                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">merchant of record secured by web3 rails</p>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
