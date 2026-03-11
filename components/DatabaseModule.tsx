@@ -53,11 +53,16 @@ const DatabaseModule: React.FC<DatabaseModuleProps> = ({ isSyncEnabled, data, on
     const [tableStatuses, setTableStatuses] = useState<Record<string, boolean>>({});
 
     useEffect(() => {
-        const storedUrl = localStorage.getItem('supabase_url') || import.meta.env.VITE_SUPABASE_URL || '';
-        const storedKey = localStorage.getItem('supabase_key') || import.meta.env.VITE_SUPABASE_KEY || '';
-        if (storedUrl) setSupabaseUrl(storedUrl);
-        if (storedKey) setSupabaseKey(storedKey);
-        if (storedUrl && storedKey) checkConnection(storedUrl, storedKey);
+        // Priorizar variables de entorno (Vercel) sobre localStorage
+        const url = import.meta.env.VITE_SUPABASE_URL || localStorage.getItem('supabase_url') || '';
+        const key = import.meta.env.VITE_SUPABASE_KEY || localStorage.getItem('supabase_key') || '';
+        
+        if (url) setSupabaseUrl(url);
+        if (key) setSupabaseKey(key);
+        
+        if (url && key) {
+            checkConnection(url, key);
+        }
     }, []);
 
     const addLog = (msg: string) => setLogs(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev]);
