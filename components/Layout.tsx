@@ -161,7 +161,7 @@ const Layout: React.FC<LayoutProps> = ({
                        )}
                    </div>
                )}
-               <button onClick={handleSyncClick} className={`p-1.5 md:p-2 rounded-xl transition-all ${isSyncEnabled ? 'text-emerald-400 bg-emerald-500/20 border border-emerald-400/30' : 'text-white/30 hover:text-white/80'}`}>
+               <button onClick={handleSyncClick} className={`flex items-center gap-1.5 p-1.5 md:p-2 rounded-xl transition-all ${isSyncEnabled ? 'text-emerald-400 bg-emerald-500/20 border border-emerald-400/30' : 'text-white/30 hover:text-white/80'}`}>
                     {isSyncing ? <RefreshCw size={14} className="animate-spin text-white"/> : <Cloud size={14}/>}
                 </button>
                <div className="flex items-center gap-0.5 bg-white/10 rounded-xl p-0.5">

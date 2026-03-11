@@ -143,23 +143,27 @@ const App = () => {
   const [syncError, setSyncError] = useState<string | null>(null);
 
   const syncToSupabase = async (tableName: string, data: any, isDelete: boolean = false) => {
-      if (localStorage.getItem('isSupabaseActive') === 'true') {
-          if (!navigator.onLine) {
-              addToOfflineQueue(tableName, data, isDelete);
-              return;
+      // SIEMPRE añadir a la cola si no está online o si la sincronización está desactivada
+      // Esto asegura que los datos no se pierdan.
+      if (localStorage.getItem('isSupabaseActive') !== 'true' || !navigator.onLine) {
+          addToOfflineQueue(tableName, data, isDelete);
+          if (localStorage.getItem('isSupabaseActive') !== 'true') {
+              console.warn(`Sincronización desactivada para ${tableName}, datos en cola.`);
           }
-          try {
-              if (isDelete) {
-                  await deleteDataFromSupabase(tableName, data);
-              } else {
-                  await syncDataToSupabase(tableName, Array.isArray(data) ? data : [data]);
-              }
-          } catch (e: any) {
-              console.error(`Error syncing ${tableName} to Supabase:`, e);
-              setSyncError(`Error sincronizando ${tableName}: ${e.message}`);
-              setTimeout(() => setSyncError(null), 5000);
-              addToOfflineQueue(tableName, data, isDelete);
+          return;
+      }
+
+      try {
+          if (isDelete) {
+              await deleteDataFromSupabase(tableName, data);
+          } else {
+              await syncDataToSupabase(tableName, Array.isArray(data) ? data : [data]);
           }
+      } catch (e: any) {
+          console.error(`Error syncing ${tableName} to Supabase:`, e);
+          setSyncError(`Error sincronizando ${tableName}: ${e.message}`);
+          setTimeout(() => setSyncError(null), 5000);
+          addToOfflineQueue(tableName, data, isDelete);
       }
   };
 
