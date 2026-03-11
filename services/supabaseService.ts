@@ -52,8 +52,15 @@ export const syncDataToSupabase = async (tableName: string, data: any[]) => {
     
     if (data.length === 0) return { success: true, count: 0 };
 
-    const { error } = await supabase.from(tableName).upsert(data);
-    if (error) throw error;
+    console.log(`Intentando sincronizar ${data.length} registros en ${tableName}...`);
+    const { error, data: result } = await supabase.from(tableName).upsert(data);
+    
+    if (error) {
+        console.error(`Error al sincronizar ${tableName}:`, error);
+        throw error;
+    }
+    
+    console.log(`Sincronización exitosa en ${tableName}.`);
     
     return { success: true, count: data.length };
 };

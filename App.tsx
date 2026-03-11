@@ -140,6 +140,8 @@ const App = () => {
       }
   };
 
+  const [syncError, setSyncError] = useState<string | null>(null);
+
   const syncToSupabase = async (tableName: string, data: any, isDelete: boolean = false) => {
       if (localStorage.getItem('isSupabaseActive') === 'true') {
           if (!navigator.onLine) {
@@ -152,8 +154,10 @@ const App = () => {
               } else {
                   await syncDataToSupabase(tableName, Array.isArray(data) ? data : [data]);
               }
-          } catch (e) {
+          } catch (e: any) {
               console.error(`Error syncing ${tableName} to Supabase:`, e);
+              setSyncError(`Error sincronizando ${tableName}: ${e.message}`);
+              setTimeout(() => setSyncError(null), 5000);
               addToOfflineQueue(tableName, data, isDelete);
           }
       }
@@ -1298,6 +1302,11 @@ const App = () => {
       isOffline={isOffline}
       pendingSyncCount={pendingSyncCount}
     >
+      {syncError && (
+        <div className="fixed bottom-4 right-4 z-[9999] bg-red-600 text-white p-4 rounded-xl shadow-2xl animate-in slide-in-from-bottom-4">
+          {syncError}
+        </div>
+      )}
       {currentView === ViewState.DASHBOARD && (
         <Dashboard 
           onNavigate={handleNavigate} 
