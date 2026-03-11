@@ -9,6 +9,28 @@ export const getSupabaseClient = () => {
     return null;
 };
 
+export const fetchDataFromSupabase = async (tableName: string) => {
+    const supabase = getSupabaseClient();
+    if (!supabase) throw new Error("Supabase no configurado");
+    
+    const { data, error } = await supabase.from(tableName).select('*');
+    if (error) throw error;
+    
+    return data;
+};
+
+export const subscribeToSupabaseChanges = (tableName: string, callback: (payload: any) => void) => {
+    const supabase = getSupabaseClient();
+    if (!supabase) throw new Error("Supabase no configurado");
+    
+    return supabase
+        .channel(`public:${tableName}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: tableName }, (payload) => {
+            callback(payload);
+        })
+        .subscribe();
+};
+
 export const deleteDataFromSupabase = async (tableName: string, id: string) => {
     const supabase = getSupabaseClient();
     if (!supabase) throw new Error("Supabase no configurado");

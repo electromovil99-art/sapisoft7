@@ -53,25 +53,15 @@ const DatabaseModule: React.FC<DatabaseModuleProps> = ({ isSyncEnabled, data, on
     const [tableStatuses, setTableStatuses] = useState<Record<string, boolean>>({});
 
     useEffect(() => {
-        console.log("DEBUG: Environment check");
-        console.log("DEBUG: import.meta.env =", import.meta.env);
-        console.log("DEBUG: VITE_SUPABASE_URL =", import.meta.env.VITE_SUPABASE_URL);
-        console.log("DEBUG: VITE_SUPABASE_KEY =", import.meta.env.VITE_SUPABASE_KEY);
-
         // Priorizar variables de entorno (Vercel) sobre localStorage
         const url = import.meta.env.VITE_SUPABASE_URL || localStorage.getItem('supabase_url') || '';
         const key = import.meta.env.VITE_SUPABASE_KEY || localStorage.getItem('supabase_key') || '';
         
-        console.log("DEBUG: Selected URL =", url);
-        console.log("DEBUG: Selected KEY =", key ? "PRESENT" : "MISSING");
-
         if (url) setSupabaseUrl(url);
         if (key) setSupabaseKey(key);
         
         if (url && key) {
             checkConnection(url, key);
-        } else {
-            addLog("❌ No se encontraron credenciales en entorno ni localStorage.");
         }
     }, []);
 

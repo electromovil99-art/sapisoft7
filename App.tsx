@@ -68,11 +68,39 @@ import {
   getNextSequence 
 } from './utils/traceability';
 
-import { syncDataToSupabase, deleteDataFromSupabase } from './services/supabaseService';
+import { syncDataToSupabase, deleteDataFromSupabase, fetchDataFromSupabase, subscribeToSupabaseChanges } from './services/supabaseService';
 
 const App = () => {
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [pendingSyncCount, setPendingSyncCount] = useState(0);
+
+  // --- SUPABASE REALTIME SYNC ---
+  useEffect(() => {
+    const loadSales = async () => {
+      try {
+        const data = await fetchDataFromSupabase('sales');
+        setSales(data || []);
+      } catch (e) {
+        console.error("Error fetching sales:", e);
+      }
+    };
+    loadSales();
+
+    const subscription = subscribeToSupabaseChanges('sales', (payload) => {
+      console.log('Realtime change:', payload);
+      if (payload.eventType === 'INSERT') {
+        setSales(prev => [payload.new, ...prev]);
+      } else if (payload.eventType === 'UPDATE') {
+        setSales(prev => prev.map(s => s.id === payload.new.id ? payload.new : s));
+      } else if (payload.eventType === 'DELETE') {
+        setSales(prev => prev.filter(s => s.id !== payload.old.id));
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const addToOfflineQueue = (tableName: string, data: any, isDelete: boolean) => {
       const queue = JSON.parse(localStorage.getItem('supabase_sync_queue') || '[]');
