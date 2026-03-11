@@ -78,7 +78,9 @@ const App = () => {
   useEffect(() => {
     const loadSales = async () => {
       try {
+        console.log("Cargando ventas iniciales desde Supabase...");
         const data = await fetchDataFromSupabase('sales');
+        console.log("Ventas cargadas:", data);
         setSales(data || []);
       } catch (e) {
         console.error("Error fetching sales:", e);
