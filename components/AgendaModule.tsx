@@ -11,12 +11,13 @@ export const AgendaModule: React.FC = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingTask, setEditingTask] = useState<Task | null>(null);
     const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
-    const [newTask, setNewTask] = useState<Partial<Task>>({ title: '', notes: '', dueDate: new Date().toISOString().split('T')[0], priority: 'MEDIA' });
+    const [newTask, setNewTask] = useState<Partial<Task>>({ title: '', notes: '', due_date: new Date().toISOString().split('T')[0], priority: 'MEDIA' });
 
     useEffect(() => {
         const loadTasks = async () => {
             try {
                 const data = await fetchDataFromSupabase('tasks');
+                console.log("Datos recibidos de Supabase:", data);
                 setTasks(data || []);
             } catch (error) {
                 console.error("Error loading tasks:", error);
@@ -62,15 +63,15 @@ export const AgendaModule: React.FC = () => {
     };
 
     const handleSaveTask = async () => {
-        if (!newTask.title || !newTask.dueDate) return alert("Complete título y fecha");
+        if (!newTask.title || !newTask.due_date) return alert("Complete título y fecha");
         
         const taskToSave = {
             title: newTask.title,
             notes: newTask.notes,
-            dueDate: newTask.dueDate,
+            due_date: newTask.due_date,
             priority: newTask.priority,
             status: editingTask ? editingTask.status : 'PENDIENTE',
-            createdAt: editingTask ? editingTask.createdAt : new Date().toISOString()
+            created_at: editingTask ? editingTask.created_at : new Date().toISOString()
         } as any;
         if (editingTask) {
             taskToSave.id = editingTask.id;
@@ -78,7 +79,7 @@ export const AgendaModule: React.FC = () => {
 
         try {
             await syncDataToSupabase('tasks', [taskToSave]);
-            setNewTask({ title: '', notes: '', dueDate: new Date().toISOString().split('T')[0], priority: 'MEDIA' });
+            setNewTask({ title: '', notes: '', due_date: new Date().toISOString().split('T')[0], priority: 'MEDIA' });
             setEditingTask(null);
             setIsModalOpen(false);
         } catch (error: any) {
@@ -128,7 +129,7 @@ export const AgendaModule: React.FC = () => {
                     <div key={task.id} className={`bg-white dark:bg-slate-800 p-2 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 flex flex-row items-center gap-2 ${priorityColors[task.priority as keyof typeof priorityColors] || ''}`}>
                         <div className="flex-grow min-w-0">
                             <h4 className={`font-bold text-sm truncate ${task.status === 'COMPLETADA' ? 'line-through text-slate-400' : 'text-slate-800'}`}>{task.title}</h4>
-                            <p className="text-slate-500 text-[10px] truncate">{task.notes} • {task.dueDate}</p>
+                            <p className="text-slate-500 text-[10px] truncate">{task.notes} • {task.due_date}</p>
                         </div>
                         <div className="flex items-center gap-1 flex-shrink-0">
                             <select className="text-[10px] p-0.5 bg-slate-100 rounded w-16" value={task.status} onChange={e => {
@@ -166,23 +167,23 @@ export const AgendaModule: React.FC = () => {
                             {/* Date Navigation */}
                             <div className="flex items-center gap-2 p-2 bg-slate-50 border rounded-xl">
                                 <button type="button" onClick={() => {
-                                    const d = new Date(newTask.dueDate!);
+                                    const d = new Date(newTask.due_date!);
                                     d.setDate(d.getDate() - 1);
-                                    setNewTask({...newTask, dueDate: d.toISOString().split('T')[0]});
+                                    setNewTask({...newTask, due_date: d.toISOString().split('T')[0]});
                                 }} className="p-2 bg-white rounded-lg border"><ChevronLeft size={16}/></button>
                                 
                                 <div className="flex-grow text-center text-sm font-bold text-slate-700">
-                                    {new Date(newTask.dueDate!).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}
+                                    {new Date(newTask.due_date!).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}
                                 </div>
 
                                 <button type="button" onClick={() => {
-                                    const d = new Date(newTask.dueDate!);
+                                    const d = new Date(newTask.due_date!);
                                     d.setDate(d.getDate() + 1);
-                                    setNewTask({...newTask, dueDate: d.toISOString().split('T')[0]});
+                                    setNewTask({...newTask, due_date: d.toISOString().split('T')[0]});
                                 }} className="p-2 bg-white rounded-lg border"><ChevronRight size={16}/></button>
                                 
                                 <div className="relative">
-                                    <input type="date" className="absolute inset-0 opacity-0 cursor-pointer" value={newTask.dueDate} onChange={e => setNewTask({...newTask, dueDate: e.target.value})} />
+                                    <input type="date" className="absolute inset-0 opacity-0 cursor-pointer" value={newTask.due_date} onChange={e => setNewTask({...newTask, due_date: e.target.value})} />
                                     <button type="button" className="p-2 bg-white rounded-lg border"><Calendar size={16}/></button>
                                 </div>
                             </div>
