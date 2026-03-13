@@ -867,7 +867,7 @@ export const CashModule: React.FC<CashModuleProps> = ({
                                 <div className="bg-white w-[280px] p-6 shadow-sm font-mono text-[10px] text-black mx-auto shrink-0 tabular-nums border-x border-slate-200">
                                     <div className="text-center mb-4 pb-2 border-b-2 border-dashed border-black">
                                         <h2 className="font-bold text-xs uppercase tracking-tighter">SapiSoft ERP</h2>
-                                        <p className="text-[8px] text-black font-bold uppercase">TICKET DE VENTA</p>
+                                        <p className="text-[8px] text-black font-bold uppercase">COMPROBANTE DE VENTA</p>
                                     </div>
                                     <div className="mb-3 space-y-0.5 text-black">
                                         <div className="flex justify-between"><span>Venta:</span> <span className="font-bold">#{linkedRecord.id.substring(0,8)}</span></div>
