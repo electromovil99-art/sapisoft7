@@ -652,6 +652,20 @@ const App = () => {
       setCashMovements(prev => [...newCashMovements, ...prev]);
       if (newCashMovements.length > 0) {
           syncToSupabase('cash_movements', newCashMovements);
+          
+          // Update current cash session if open
+          if (currentCashSession && currentCashSession.status === 'OPEN') {
+              const updatedSession = { ...currentCashSession };
+              newCashMovements.forEach(m => {
+                  if (m.paymentMethod === 'Efectivo') {
+                      updatedSession.expectedCashAtClose += Number(m.amount);
+                  } else {
+                      updatedSession.expectedDigitalAtClose += Number(m.amount);
+                  }
+              });
+              setCurrentCashSession(updatedSession);
+              syncToSupabase('cash_box_sessions', updatedSession);
+          }
       }
 
       return { globalId, correlativeId };
