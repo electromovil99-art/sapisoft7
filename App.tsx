@@ -100,6 +100,18 @@ const App = () => {
     };
     loadCashBoxSessions();
 
+    const loadCashMovements = async () => {
+      try {
+        console.log("Cargando movimientos de caja iniciales desde Supabase...");
+        const data = await fetchDataFromSupabase('cash_movements');
+        console.log("Movimientos de caja cargados:", data);
+        setCashMovements(data || []);
+      } catch (e) {
+        console.error("Error fetching cash movements:", e);
+      }
+    };
+    loadCashMovements();
+
     const subscription = subscribeToSupabaseChanges('sales', (payload) => {
       console.log('Realtime change:', payload);
       if (payload.eventType === 'INSERT') {
@@ -122,9 +134,21 @@ const App = () => {
       }
     });
 
+    const subscriptionMovements = subscribeToSupabaseChanges('cash_movements', (payload) => {
+      console.log('Realtime change in cash_movements:', payload);
+      if (payload.eventType === 'INSERT') {
+        setCashMovements(prev => [payload.new, ...prev]);
+      } else if (payload.eventType === 'UPDATE') {
+        setCashMovements(prev => prev.map(s => s.id === payload.new.id ? payload.new : s));
+      } else if (payload.eventType === 'DELETE') {
+        setCashMovements(prev => prev.filter(s => s.id !== payload.old.id));
+      }
+    });
+
     return () => {
       subscription.unsubscribe();
       subscriptionSessions.unsubscribe();
+      subscriptionMovements.unsubscribe();
     };
   }, []);
 
