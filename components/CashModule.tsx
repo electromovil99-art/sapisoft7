@@ -870,7 +870,7 @@ export const CashModule: React.FC<CashModuleProps> = ({
                                         <p className="text-[8px] text-black font-bold uppercase">COMPROBANTE DE VENTA</p>
                                     </div>
                                     <div className="mb-3 space-y-0.5 text-black">
-                                        <div className="flex justify-between"><span>Venta:</span> <span className="font-bold">#{linkedRecord.id.substring(0,8)}</span></div>
+                                        <div className="flex justify-between"><span>Comprobante:</span> <span className="font-bold">{linkedRecord.correlativeId || `#${linkedRecord.id.substring(0,8)}`}</span></div>
                                         <div className="flex justify-between"><span>Fecha:</span> <span className="font-bold">{linkedRecord.date} {linkedRecord.time}</span></div>
                                         <div className="flex justify-between"><span>Cliente:</span> <span className="font-bold truncate max-w-[150px]">{linkedRecord.clientName}</span></div>
                                         <div className="flex justify-between"><span>Doc:</span> <span className="uppercase font-bold">{linkedRecord.docType}</span></div>
@@ -878,13 +878,13 @@ export const CashModule: React.FC<CashModuleProps> = ({
                                     
                                     <div className="border-y border-dashed border-black py-2 mb-3">
                                         <div className="grid grid-cols-[1fr_22px_40px_45px] font-black text-[8px] mb-1 border-b border-black pb-1 uppercase text-black"><span>Articulo</span><span className="text-center">Cant</span><span className="text-right">Unit</span><span className="text-right">Total</span></div>
-                                        {linkedRecord.items.map((item: CartItem, idx: number) => (
+                                        {linkedRecord.items && linkedRecord.items.map((item: any, idx: number) => (
                                             <div key={idx} className="mb-1 last:mb-0 leading-tight text-black">
                                                 <div className="grid grid-cols-[1fr_22px_40px_45px]">
                                                     <span className="uppercase truncate pr-1 font-bold">{item.name}</span>
                                                     <span className="text-center font-black">{item.quantity}</span>
-                                                    <span className="text-right font-medium">{item.price.toFixed(0)}</span>
-                                                    <span className="text-right font-black">{(item.price * item.quantity).toFixed(0)}</span>
+                                                    <span className="text-right font-medium">{Number(item.price).toFixed(0)}</span>
+                                                    <span className="text-right font-black">{Number(item.price * item.quantity).toFixed(0)}</span>
                                                 </div>
                                             </div>
                                         ))}
