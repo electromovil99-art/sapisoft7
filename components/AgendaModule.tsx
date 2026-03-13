@@ -67,10 +67,10 @@ export const AgendaModule: React.FC = () => {
         const taskToSave = {
             title: newTask.title,
             notes: newTask.notes,
-            due_date: newTask.dueDate,
+            dueDate: newTask.dueDate,
             priority: newTask.priority,
             status: editingTask ? editingTask.status : 'PENDIENTE',
-            created_at: editingTask ? (editingTask as any).created_at || (editingTask as any).createdAt : new Date().toISOString()
+            createdAt: editingTask ? editingTask.createdAt : new Date().toISOString()
         } as any;
         if (editingTask) {
             taskToSave.id = editingTask.id;
@@ -132,16 +132,14 @@ export const AgendaModule: React.FC = () => {
                         </div>
                         <div className="flex items-center gap-1 flex-shrink-0">
                             <select className="text-[10px] p-0.5 bg-slate-100 rounded w-16" value={task.status} onChange={e => {
-                                const { dueDate, createdAt, ...taskWithoutOldFields } = task as any;
-                                syncDataToSupabase('tasks', [{...taskWithoutOldFields, status: e.target.value as any}]);
+                                syncDataToSupabase('tasks', [{...task, status: e.target.value as any}]);
                             }}>
                                 <option value="PENDIENTE">Pendiente</option>
                                 <option value="EN_PROCESO">Proceso</option>
                                 <option value="COMPLETADA">Hecho</option>
                             </select>
                             <select className="text-[10px] p-0.5 bg-slate-100 rounded w-12" value={task.priority} onChange={e => {
-                                const { dueDate, createdAt, ...taskWithoutOldFields } = task as any;
-                                syncDataToSupabase('tasks', [{...taskWithoutOldFields, priority: e.target.value as any}]);
+                                syncDataToSupabase('tasks', [{...task, priority: e.target.value as any}]);
                             }}>
                                 <option value="BAJA">Baja</option>
                                 <option value="MEDIA">Media</option>
