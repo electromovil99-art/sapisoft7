@@ -88,6 +88,18 @@ const App = () => {
     };
     loadSales();
 
+    const loadCashBoxSessions = async () => {
+      try {
+        console.log("Cargando sesiones de caja iniciales desde Supabase...");
+        const data = await fetchDataFromSupabase('cash_box_sessions');
+        console.log("Sesiones de caja cargadas:", data);
+        setCashBoxSessions(data || []);
+      } catch (e) {
+        console.error("Error fetching cash box sessions:", e);
+      }
+    };
+    loadCashBoxSessions();
+
     const subscription = subscribeToSupabaseChanges('sales', (payload) => {
       console.log('Realtime change:', payload);
       if (payload.eventType === 'INSERT') {
@@ -99,8 +111,20 @@ const App = () => {
       }
     });
 
+    const subscriptionSessions = subscribeToSupabaseChanges('cash_box_sessions', (payload) => {
+      console.log('Realtime change cash_box_sessions:', payload);
+      if (payload.eventType === 'INSERT') {
+        setCashBoxSessions(prev => [payload.new, ...prev]);
+      } else if (payload.eventType === 'UPDATE') {
+        setCashBoxSessions(prev => prev.map(s => s.id === payload.new.id ? payload.new : s));
+      } else if (payload.eventType === 'DELETE') {
+        setCashBoxSessions(prev => prev.filter(s => s.id !== payload.old.id));
+      }
+    });
+
     return () => {
       subscription.unsubscribe();
+      subscriptionSessions.unsubscribe();
     };
   }, []);
 
@@ -235,6 +259,17 @@ const App = () => {
   const [cashTransferRequests, setCashTransferRequests] = useState<CashTransferRequest[]>([]);
   const [cashBoxSessions, setCashBoxSessions] = useState<CashBoxSession[]>([]);
   const [inventoryHistory, setInventoryHistory] = useState<InventoryHistorySession[]>([]);
+
+  useEffect(() => {
+    if (cashBoxSessions.length > 0) {
+      const activeSession = cashBoxSessions.find(s => s.status === 'OPEN');
+      if (activeSession) {
+        setCurrentCashSession(activeSession);
+      } else {
+        setCurrentCashSession(undefined);
+      }
+    }
+  }, [cashBoxSessions]);
 
   // --- HISTORY HANDLING ---
   useEffect(() => {
@@ -1023,7 +1058,7 @@ const App = () => {
   
   const handleMarkRepaired = (id: string) => {
       setServices(prev => {
-          const newServices = prev.map(s => s.id === id ? { ...s, status: 'Reparado' } : s);
+          const newServices = prev.map(s => s.id === id ? { ...s, status: 'Reparado' as const } : s);
           const updatedService = newServices.find(s => s.id === id);
           if (updatedService) syncToSupabase('service_orders', updatedService);
           return newServices;
@@ -1155,6 +1190,7 @@ const App = () => {
           closingNotes: ''
       };
       setCurrentCashSession(newSession);
+      syncToSupabase('cash_box_sessions', newSession);
   };
 
   const handleCloseCashBox = (countedCash: number, systemCash: number, systemDigital: number, notes: string, confirmedBankBalances: Record<string, string>) => {
@@ -1177,6 +1213,7 @@ const App = () => {
           };
           setCashBoxSessions(prev => [closedSession, ...prev]);
           setCurrentCashSession(undefined);
+          syncToSupabase('cash_box_sessions', closedSession);
       }
   };
 
