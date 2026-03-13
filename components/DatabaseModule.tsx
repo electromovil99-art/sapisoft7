@@ -143,6 +143,13 @@ const DatabaseModule: React.FC<DatabaseModuleProps> = ({ isSyncEnabled, data, on
                 if (error) throw error;
             }
 
+            // Migrate Cash Box Sessions
+            if (data?.cashBoxSessions && data.cashBoxSessions.length > 0) {
+                addLog(`Subiendo ${data.cashBoxSessions.length} sesiones de caja...`);
+                const { error } = await supabase.from('cash_box_sessions').upsert(data.cashBoxSessions);
+                if (error) throw error;
+            }
+
             addLog("✅ Migración completada exitosamente.");
             addLog("🎉 ¡El sistema ahora está guardando en Supabase!");
             
