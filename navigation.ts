@@ -5,7 +5,7 @@ import {
   Wallet, Users, Activity, ShoppingBag, FolderCog, FileSearch, Truck, Landmark, BrainCircuit, 
   Printer, Shield, FileMinus, CreditCard, Map, MessageCircle, FileText,
   Database, Settings, BarChart3, ClipboardList, FileScan, FileBarChart, PieChart, Image as ImageIcon, History, Menu,
-  TrendingDown, TrendingUp, Building2, Bug, ShieldCheck, SearchCode, Settings2, Zap, Store, ArrowRightLeft, Clock, KanbanSquare, HandCoins, Landmark as LandmarkIcon, Bot, Megaphone, Radio
+  TrendingDown, TrendingUp, Building2, Bug, ShieldCheck, SearchCode, Settings2, Zap, Store, ArrowRightLeft, Clock, KanbanSquare, HandCoins, Landmark as LandmarkIcon, Bot, Megaphone, Radio, Calendar
 } from 'lucide-react';
 
 export const INITIAL_NAV_STRUCTURE = [
@@ -36,6 +36,7 @@ export const INITIAL_NAV_STRUCTURE = [
       { view: ViewState.CRM, label: 'CRM', icon: KanbanSquare, enabled: true },
       { view: ViewState.BROADCAST, label: 'Difusión', icon: Radio, enabled: true },
       { view: ViewState.AI_ASSISTANT, label: 'Asistente IA', icon: Bot, enabled: true },
+      { view: ViewState.AGENDA, label: 'Agenda', icon: Calendar, enabled: true },
     ]
   },
   {

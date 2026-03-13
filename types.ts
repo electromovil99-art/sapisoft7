@@ -52,10 +52,21 @@ export enum ViewState {
   ACCOUNTS_RECEIVABLE = 'ACCOUNTS_RECEIVABLE',
   ACCOUNTS_PAYABLE = 'ACCOUNTS_PAYABLE',
   AI_ASSISTANT = 'AI_ASSISTANT',
-  SUNAT_BILLING = 'SUNAT_BILLING'
+  SUNAT_BILLING = 'SUNAT_BILLING',
+  AGENDA = 'AGENDA'
 }
 
 export type PaymentMethodType = 'Efectivo' | 'Yape' | 'Plin' | 'Yape/Plin' | 'Tarjeta' | 'Deposito' | 'Transferencia' | 'Saldo Favor';
+
+export interface Task {
+    id: string;
+    title: string;
+    notes: string;
+    dueDate: string;
+    status: 'PENDIENTE' | 'EN_PROCESO' | 'COMPLETADA';
+    createdAt: string;
+    priority: 'BAJA' | 'MEDIA' | 'ALTA';
+}
 
 // ... existing types ...
 

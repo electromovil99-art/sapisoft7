@@ -6,8 +6,9 @@ import {
   SystemUser, AuthSession, Tenant, BankAccount, GeoLocation, 
   Quotation, Presale, Branch, WarehouseTransfer, CashTransferRequest, 
   CashBoxSession, CartItem, PaymentBreakdown, InventoryHistorySession,
-  CrmContact, PaymentMethodType
+  CrmContact, PaymentMethodType, Task
 } from './types';
+import { AgendaModule } from './components/AgendaModule';
 import { 
   TECH_PRODUCTS, PHARMA_PRODUCTS, MOCK_CLIENTS, MOCK_SERVICES, 
   MOCK_CASH_MOVEMENTS, MOCK_LOCATIONS, TECH_CATEGORIES 
@@ -249,6 +250,7 @@ const App = () => {
   const [categories, setCategories] = useState<Category[]>(TECH_CATEGORIES);
   const [brands, setBrands] = useState<Brand[]>([{ id: '1', name: 'SAMSUNG' }, { id: '2', name: 'APPLE' }]);
   const [sales, setSales] = useState<SaleRecord[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [purchases, setPurchases] = useState<PurchaseRecord[]>([]);
   const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
   const [cashMovements, setCashMovements] = useState<CashMovement[]>(MOCK_CASH_MOVEMENTS);
@@ -919,6 +921,9 @@ const App = () => {
       setServices(prev => [enrichedService, ...prev]);
       syncToSupabase('service_orders', enrichedService);
   };
+  const handleAddTask = (task: Task) => setTasks([...tasks, task]);
+  const handleUpdateTask = (updatedTask: Task) => setTasks(tasks.map(t => t.id === updatedTask.id ? updatedTask : t));
+  const handleDeleteTask = (taskId: string) => setTasks(tasks.filter(t => t.id !== taskId));
   const handleUpdateService = (s: ServiceOrder) => {
       setServices(prev => prev.map(item => item.id === s.id ? s : item));
       syncToSupabase('service_orders', s);
@@ -1544,6 +1549,7 @@ const App = () => {
           }} systemBaseCurrency={baseCurrency} isCashBoxOpen={!!currentCashSession} />}
       {currentView === ViewState.INVENTORY_ADJUSTMENT && <InventoryAdjustmentModule products={products} salesHistory={sales} onProcessInventorySession={handleProcessInventorySession} sessionUser={session?.user?.fullName || 'Admin'} history={inventoryHistory} />}
       {currentView === ViewState.AI_ASSISTANT && session && <AiAssistantModule sessionUser={session?.user?.fullName || 'Admin'} products={products} />}
+      {currentView === ViewState.AGENDA && <AgendaModule />}
     </Layout>
   );
 };
