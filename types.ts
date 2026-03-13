@@ -64,7 +64,7 @@ export interface Task {
     notes: string;
     dueDate: string;
     status: 'PENDIENTE' | 'EN_PROCESO' | 'COMPLETADA';
-    createdAt: string;
+    created_at: string;
     priority: 'BAJA' | 'MEDIA' | 'ALTA';
 }
 

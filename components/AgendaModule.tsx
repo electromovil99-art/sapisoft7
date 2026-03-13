@@ -68,7 +68,7 @@ export const AgendaModule: React.FC = () => {
             ...editingTask,
             ...newTask,
             status: editingTask ? editingTask.status : 'PENDIENTE',
-            createdAt: editingTask ? editingTask.createdAt : new Date().toISOString()
+            created_at: editingTask ? (editingTask as any).created_at || (editingTask as any).createdAt : new Date().toISOString()
         } as Task;
 
         try {
