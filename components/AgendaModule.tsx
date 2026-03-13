@@ -79,6 +79,11 @@ export const AgendaModule: React.FC = () => {
 
         try {
             await syncDataToSupabase('tasks', [taskToSave]);
+            
+            // Recargar tareas para asegurar que la UI se actualice
+            const data = await fetchDataFromSupabase('tasks');
+            setTasks(data || []);
+
             setNewTask({ title: '', notes: '', due_date: new Date().toISOString().split('T')[0], priority: 'MEDIA' });
             setEditingTask(null);
             setIsModalOpen(false);
