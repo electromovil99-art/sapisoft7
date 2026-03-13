@@ -216,7 +216,7 @@ export const PurchaseModule: React.FC<PurchaseModuleProps> = ({ products, suppli
       if (paymentAmountRef.current) paymentAmountRef.current.focus();
   };
 
-  const handleProcess = () => {
+  const handleProcess = async () => {
       if (cart.length === 0) return;
       if (!selectedSupplier) return alert("Seleccione un proveedor");
       const fullDocType = docType + (docNumber ? ` #${docNumber}` : '');
@@ -225,7 +225,7 @@ export const PurchaseModule: React.FC<PurchaseModuleProps> = ({ products, suppli
           setCurrentPayment({ ...currentPayment, method: 'Efectivo', amount: total.toFixed(2), reference: '', accountId: '' });
           setShowPaymentModal(true);
       } else {
-          const result = onProcessPurchase(cart, total, fullDocType, selectedSupplier.name, 'Credito', creditDays, [], currency, parseFloat(exchangeRate));
+          const result = await onProcessPurchase(cart, total, fullDocType, selectedSupplier.name, 'Credito', creditDays, [], currency, parseFloat(exchangeRate));
           setTicketData({
               id: result?.correlativeId || 'P-' + Math.floor(Math.random() * 100000).toString(),
               globalId: result?.globalId,
@@ -245,10 +245,10 @@ export const PurchaseModule: React.FC<PurchaseModuleProps> = ({ products, suppli
       }
   };
 
-  const handleFinalizePurchase = () => {
+  const handleFinalizePurchase = async () => {
       if (getPaymentTotal() < total - 0.05) return alert("Falta completar el pago.");
       const fullDocType = docType + (docNumber ? ` #${docNumber}` : '');
-      const result = onProcessPurchase(cart, total, fullDocType, selectedSupplier!.name, 'Contado', 0, paymentList, currency, parseFloat(exchangeRate));
+      const result = await onProcessPurchase(cart, total, fullDocType, selectedSupplier!.name, 'Contado', 0, paymentList, currency, parseFloat(exchangeRate));
       setTicketData({
           id: result?.correlativeId || 'P-' + Math.floor(Math.random() * 100000).toString(),
           globalId: result?.globalId,

@@ -23,17 +23,12 @@ export const subscribeToSupabaseChanges = (tableName: string, callback: (payload
     const supabase = getSupabaseClient();
     if (!supabase) throw new Error("Supabase no configurado");
     
-    console.log(`Intentando suscribirse a cambios en: ${tableName}`);
-    
     return supabase
         .channel(`public:${tableName}`)
         .on('postgres_changes', { event: '*', schema: 'public', table: tableName }, (payload) => {
-            console.log(`Cambio recibido en ${tableName}:`, payload);
             callback(payload);
         })
-        .subscribe((status) => {
-            console.log(`Estado de suscripción para ${tableName}:`, status);
-        });
+        .subscribe();
 };
 
 export const deleteDataFromSupabase = async (tableName: string, id: string) => {
@@ -52,15 +47,12 @@ export const syncDataToSupabase = async (tableName: string, data: any[]) => {
     
     if (data.length === 0) return { success: true, count: 0 };
 
-    console.log(`Intentando sincronizar ${data.length} registros en ${tableName}...`);
     const { error, data: result } = await supabase.from(tableName).upsert(data);
     
     if (error) {
         console.error(`Error al sincronizar ${tableName}:`, error);
         throw error;
     }
-    
-    console.log(`Sincronización exitosa en ${tableName}.`);
     
     return { success: true, count: data.length };
 };

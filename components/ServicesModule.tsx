@@ -17,6 +17,7 @@ interface ServicesProps {
   onOpenWhatsApp?: (name: string, phone: string, message?: string) => void;
   locations: GeoLocation[];
   currentBranchId: string;
+  onGetNextSupportId?: () => Promise<string>;
 }
 
 interface PaymentDetail {
@@ -28,7 +29,7 @@ interface PaymentDetail {
     bankName?: string;
 }
 
-export const ServicesModule: React.FC<ServicesProps> = ({ services, products, categories, bankAccounts, onAddService, onUpdateService, onFinalizeService, onMarkRepaired, clients, onAddClient, onOpenWhatsApp, locations, currentBranchId }) => {
+export const ServicesModule: React.FC<ServicesProps> = ({ services, products, categories, bankAccounts, onAddService, onUpdateService, onFinalizeService, onMarkRepaired, clients, onAddClient, onOpenWhatsApp, locations, currentBranchId, onGetNextSupportId }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -757,10 +758,11 @@ export const ServicesModule: React.FC<ServicesProps> = ({ services, products, ca
                 </div>
                 <div className="p-5 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-3 shrink-0 sticky bottom-0 z-10">
                     <button onClick={() => setShowModal(false)} className="px-6 py-2 text-slate-500 font-bold hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all uppercase text-[10px] hidden sm:block">Cerrar</button>
-                    <button onClick={() => { 
-                        if(!newOrder.client || !newOrder.deviceModel) return alert("Faltan datos"); 
+                    <button onClick={async () => { 
+                        if(!newOrder.client || !newOrder.deviceModel) return alert("Faltan datos");
+                        const id = isEditMode ? newOrder.id! : (onGetNextSupportId ? await onGetNextSupportId() : Math.floor(Math.random()*100000).toString());
                         const serviceData: ServiceOrder = { 
-                            id: isEditMode ? newOrder.id! : Math.floor(Math.random()*100000).toString(), 
+                            id: id, 
                             entryDate: newOrder.entryDate!, 
                             entryTime: newOrder.entryTime!, 
                             client: newOrder.client.toUpperCase(), 

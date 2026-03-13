@@ -5,18 +5,14 @@ export const BACKEND_URL = 'https://api.sapi-soft.com';
 
 // Mock Socket to ensure app stability in offline/dev modes
 const createMockSocket = () => {
-    console.log("[SocketService] Initializing in Safe Mode (Mock).");
     return {
         on: (event: string, cb: any) => {},
         off: (event: string, cb: any) => {},
         emit: (event: string, data?: any) => {
-            console.log(`[MockSocket] Event suppressed: ${event}`, data);
         },
         connect: () => {
-            console.log('[MockSocket] Connect called (Simulated)');
         },
         disconnect: () => {
-            console.log('[MockSocket] Disconnect called (Simulated)');
         },
         connected: false,
         id: 'mock-socket-' + Date.now(),

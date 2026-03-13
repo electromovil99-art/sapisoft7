@@ -594,7 +594,7 @@ export default function WhatsAppModule({
                 audioRef.current?.play().catch(() => {});
             }
             if (isAiBotActiveRef.current && !botMutedChatsRef.current.has(msg.from)) {
-                console.log("[Background Process] Generating AI Reply for:", msg.from);
+// [Background Process] Generating AI Reply for: msg.from
                 generateAutoReply(msg.body, msg.from);
             }
         }

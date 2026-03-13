@@ -41,7 +41,8 @@ const tableDefinitions = [
     { name: "broadcast_jobs", desc: "Campañas de mensajes masivos" },
     { name: "tenant_invoices", desc: "Facturación a inquilinos (SaaS)" },
     { name: "master_accounts", desc: "Cuentas maestras del Super Admin" },
-    { name: "master_movements", desc: "Movimientos financieros del Super Admin" }
+    { name: "master_movements", desc: "Movimientos financieros del Super Admin" },
+    { name: "global_counters", desc: "Contadores globales para IDs correlativos" }
 ];
 
 const DatabaseModule: React.FC<DatabaseModuleProps> = ({ isSyncEnabled, data, onSyncDownload }) => {
@@ -208,6 +209,7 @@ const DatabaseModule: React.FC<DatabaseModuleProps> = ({ isSyncEnabled, data, on
                 DROP TABLE IF EXISTS public.tenant_invoices CASCADE;
                 DROP TABLE IF EXISTS public.master_accounts CASCADE;
                 DROP TABLE IF EXISTS public.master_movements CASCADE;
+                DROP TABLE IF EXISTS public.global_counters CASCADE;
 
                 -- Core ERP
                 CREATE TABLE IF NOT EXISTS public.tenants ( id TEXT PRIMARY KEY, "companyName" TEXT, industry TEXT, status TEXT, "subscriptionEnd" TEXT, "ownerName" TEXT, phone TEXT, "planType" TEXT, "baseCurrency" TEXT, "creditBalance" NUMERIC );
@@ -254,6 +256,8 @@ const DatabaseModule: React.FC<DatabaseModuleProps> = ({ isSyncEnabled, data, on
                 CREATE TABLE IF NOT EXISTS public.tenant_invoices ( id TEXT PRIMARY KEY, "tenantId" TEXT, "tenantName" TEXT, date TEXT, "dueDate" TEXT, amount NUMERIC, "creditApplied" NUMERIC, "netAmount" NUMERIC, status TEXT, "planType" TEXT );
                 CREATE TABLE IF NOT EXISTS public.master_accounts ( id TEXT PRIMARY KEY, name TEXT, type TEXT, currency TEXT, balance NUMERIC );
                 CREATE TABLE IF NOT EXISTS public.master_movements ( id TEXT PRIMARY KEY, date TEXT, "time" TEXT, type TEXT, "accountId" TEXT, "accountName" TEXT, amount NUMERIC, concept TEXT, "tenantId" TEXT, reference TEXT );
+                CREATE TABLE IF NOT EXISTS public.global_counters ( id TEXT PRIMARY KEY, value BIGINT );
+                INSERT INTO public.global_counters (id, value) VALUES ('global_counter', 1) ON CONFLICT (id) DO NOTHING;
             `;
             
             const { error } = await supabase.rpc('execute_sql', { sql: schemaSQL });

@@ -68,6 +68,8 @@ import {
   getNextSequence 
 } from './utils/traceability';
 
+import { getNextModuleId, getNextGlobalSupportId } from './services/counterService';
+
 import { syncDataToSupabase, deleteDataFromSupabase, fetchDataFromSupabase, subscribeToSupabaseChanges } from './services/supabaseService';
 
 const App = () => {
@@ -78,9 +80,7 @@ const App = () => {
   useEffect(() => {
     const loadSales = async () => {
       try {
-        console.log("Cargando ventas iniciales desde Supabase...");
         const data = await fetchDataFromSupabase('sales');
-        console.log("Ventas cargadas:", data);
         setSales(data || []);
       } catch (e) {
         console.error("Error fetching sales:", e);
@@ -90,9 +90,7 @@ const App = () => {
 
     const loadCashBoxSessions = async () => {
       try {
-        console.log("Cargando sesiones de caja iniciales desde Supabase...");
         const data = await fetchDataFromSupabase('cash_box_sessions');
-        console.log("Sesiones de caja cargadas:", data);
         setCashBoxSessions(data || []);
       } catch (e) {
         console.error("Error fetching cash box sessions:", e);
@@ -102,9 +100,7 @@ const App = () => {
 
     const loadCashMovements = async () => {
       try {
-        console.log("Cargando movimientos de caja iniciales desde Supabase...");
         const data = await fetchDataFromSupabase('cash_movements');
-        console.log("Movimientos de caja cargados:", data);
         setCashMovements(data || []);
       } catch (e) {
         console.error("Error fetching cash movements:", e);
@@ -113,7 +109,6 @@ const App = () => {
     loadCashMovements();
 
     const subscription = subscribeToSupabaseChanges('sales', (payload) => {
-      console.log('Realtime change:', payload);
       if (payload.eventType === 'INSERT') {
         setSales(prev => [payload.new, ...prev]);
       } else if (payload.eventType === 'UPDATE') {
@@ -124,7 +119,6 @@ const App = () => {
     });
 
     const subscriptionSessions = subscribeToSupabaseChanges('cash_box_sessions', (payload) => {
-      console.log('Realtime change cash_box_sessions:', payload);
       if (payload.eventType === 'INSERT') {
         setCashBoxSessions(prev => [payload.new, ...prev]);
       } else if (payload.eventType === 'UPDATE') {
@@ -135,7 +129,6 @@ const App = () => {
     });
 
     const subscriptionMovements = subscribeToSupabaseChanges('cash_movements', (payload) => {
-      console.log('Realtime change in cash_movements:', payload);
       if (payload.eventType === 'INSERT') {
         setCashMovements(prev => [payload.new, ...prev]);
       } else if (payload.eventType === 'UPDATE') {
@@ -286,7 +279,7 @@ const App = () => {
 
   useEffect(() => {
     if (cashBoxSessions.length > 0) {
-      const activeSession = cashBoxSessions.find(s => s.status === 'OPEN');
+      const activeSession = cashBoxSessions.find(s => s.status === 'OPEN' && s.branchId === currentBranchId);
       if (activeSession) {
         setCurrentCashSession(activeSession);
       } else {
@@ -559,11 +552,17 @@ const App = () => {
       setSales(prev => prev.map(s => s.id === ticketId ? { ...s, ...updates } : s));
   };
 
-  const handleProcessSale = (cart: CartItem[], total: number, docType: string, clientName: string, paymentBreakdown: PaymentBreakdown, ticketId: string, detailedPayments: any[], currency: string, exchangeRate: number) => {
+  const handleProcessSale = async (cart: CartItem[], total: number, docType: string, clientName: string, paymentBreakdown: PaymentBreakdown, ticketId: string, detailedPayments: any[], currency: string, exchangeRate: number) => {
       // Generate Traceability IDs
-      const globalId = generateTransactionId();
+      const globalId = generateUUID();
+      
+      const companyId = session?.user.companyName || 'SapiSoft Demo';
+      const branchId = currentBranchId;
+      const moduleType = docType.includes('NOTA DE CREDITO') ? 'NOTA_CREDITO' : 'VENTA';
+      
       // If ticketId is not provided or is just a timestamp, generate a proper correlative
-      const correlativeId = ticketId && ticketId.includes('-') ? ticketId : formatDocumentId(docType.substring(0, 3).toUpperCase(), getNextSequence(docType));
+      const nextId = await getNextModuleId(companyId, branchId, moduleType);
+      const correlativeId = ticketId && ticketId.includes('-') ? ticketId : formatDocumentId(docType.substring(0, 3).toUpperCase(), nextId);
 
       const sale: SaleRecord = {
           id: ticketId || generateUUID(),
@@ -696,9 +695,15 @@ const App = () => {
       return { globalId, correlativeId };
   };
 
-  const handleProcessPurchase = (cart: CartItem[], total: number, docType: string, supplierName: string, paymentCondition: 'Contado' | 'Credito', creditDays: number, detailedPayments: any[], currency?: string, exchangeRate?: number) => {
-      const globalId = generateTransactionId();
-      const correlativeId = formatDocumentId('PUR', getNextSequence('COMPRA'));
+  const handleProcessPurchase = async (cart: CartItem[], total: number, docType: string, supplierName: string, paymentCondition: 'Contado' | 'Credito', creditDays: number, detailedPayments: any[], currency?: string, exchangeRate?: number) => {
+      const globalId = generateUUID();
+      
+      const companyId = session?.user.companyName || 'SapiSoft Demo';
+      const branchId = currentBranchId;
+      const moduleType = 'COMPRA';
+      
+      const nextId = await getNextModuleId(companyId, branchId, moduleType);
+      const correlativeId = formatDocumentId('PUR', nextId);
 
       const purchase: PurchaseRecord = {
           id: 'PUR-' + generateUUID(),
@@ -1419,7 +1424,7 @@ const App = () => {
       )}
 
       {currentView === ViewState.SERVICES && (
-        <ServicesModule services={services} products={products} categories={categories} bankAccounts={bankAccounts} onAddService={handleAddService} onUpdateService={handleUpdateService} onFinalizeService={handleFinalizeService} onMarkRepaired={handleMarkRepaired} clients={clients} onAddClient={handleAddClient} onOpenWhatsApp={(name, phone) => { window.open(`https://wa.me/${phone}`); }} locations={locations} currentBranchId={currentBranchId} />
+        <ServicesModule services={services} products={products} categories={categories} bankAccounts={bankAccounts} onAddService={handleAddService} onUpdateService={handleUpdateService} onFinalizeService={handleFinalizeService} onMarkRepaired={handleMarkRepaired} clients={clients} onAddClient={handleAddClient} onOpenWhatsApp={(name, phone) => { window.open(`https://wa.me/${phone}`); }} locations={locations} currentBranchId={currentBranchId} onGetNextSupportId={getNextGlobalSupportId} />
       )}
       
       {currentView === ViewState.INVENTORY && (

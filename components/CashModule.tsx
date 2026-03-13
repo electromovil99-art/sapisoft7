@@ -2,6 +2,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Plus, Minus, Wallet, Banknote, QrCode, Landmark, CreditCard, Eye, X, Lock, Unlock, CheckCircle, Printer, RotateCcw, ArrowRightLeft, Calculator, FileText, AlertTriangle, ChevronRight, ArrowRight, Tag, Layers, Hash, Layout, FileText as FileIcon, Clock, ChevronDown, User, Info, Fingerprint, ShoppingCart, ShoppingBag } from 'lucide-react';
 import { CashMovement, PaymentMethodType, BankAccount, SaleRecord, PurchaseRecord, CartItem, CashBoxSession } from '../types';
+import { generateUUID } from '../utils/traceability';
 
 interface CashModuleProps {
     movements: CashMovement[];
@@ -413,8 +414,7 @@ export const CashModule: React.FC<CashModuleProps> = ({
 
   const activeMovements = useMemo(() => {
       if (!currentSession) return [];
-      const openingTimeStr = currentSession.openingDate.split(' ')[1];
-      return movements.filter(m => m.date === todayStr && m.time >= openingTimeStr);
+      return movements.filter(m => m.date === todayStr);
   }, [movements, todayStr, currentSession]);
 
   const displayedMovements = useMemo(() => {
@@ -475,7 +475,9 @@ export const CashModule: React.FC<CashModuleProps> = ({
       const finalCategory = financialType === 'Fijo' ? category.toUpperCase() : 'VARIABLE';
 
       onAddMovement({ 
-        id: 'M-' + Date.now(), date: todayStr, 
+        id: 'M-' + Date.now(), 
+        globalId: generateUUID(),
+        date: todayStr, 
         time: new Date().toLocaleTimeString('es-PE', { hour12: false }), 
         type, paymentMethod, concept: concept.toUpperCase(), amount: parseFloat(amount), 
         user: 'ADMIN', category: finalCategory, financialType: financialType as any, 
@@ -503,7 +505,7 @@ export const CashModule: React.FC<CashModuleProps> = ({
     if (conceptUpper.includes("VENTA")) {
         const saleIdMatch = conceptUpper.match(/#([A-Z0-9-]+)/);
         if (saleIdMatch) {
-            const sale = salesHistory.find(s => s.id === saleIdMatch[1]);
+            const sale = salesHistory.find(s => s.id === saleIdMatch[1] || s.correlativeId === saleIdMatch[1]);
             if (sale) return { ...sale, type: 'SALE' as const };
         }
     }
@@ -525,10 +527,11 @@ export const CashModule: React.FC<CashModuleProps> = ({
     
     // Check wallet change in movements
     const ticketIdClean = sale.id; 
+    const correlativeId = sale.correlativeId;
     const walletDeposit = movements.find(m => 
         m.category === 'BILLETERA' && 
         m.type === 'Ingreso' &&
-        m.concept.includes(ticketIdClean)
+        (m.concept.includes(ticketIdClean) || (correlativeId && m.concept.includes(correlativeId)))
     );
 
     const walletChange = walletDeposit ? walletDeposit.amount : 0;
@@ -677,9 +680,11 @@ export const CashModule: React.FC<CashModuleProps> = ({
                         <thead className="bg-slate-50 text-slate-400 font-black uppercase border-b sticky top-0 z-10">
                             <tr>
                                 <th className="px-4 py-3 w-20">ID Trans.</th>
+                                <th className="px-4 py-3 w-40">Global ID</th>
                                 <th className="px-4 py-3 w-20">Hora</th>
                                 <th className="px-4 py-3 flex-1 min-w-[200px]">Concepto</th>
                                 <th className="px-4 py-3 w-28">Metodo</th>
+                                <th className="px-4 py-3 w-28">Nro Venta</th>
                                 <th className="px-4 py-3 w-28">Nro Operación</th>
                                 <th className="px-4 py-3 text-right w-28">Importe</th>
                                 <th className="px-4 py-3 text-right w-32 bg-slate-100">Saldo Acum.</th>
@@ -690,11 +695,15 @@ export const CashModule: React.FC<CashModuleProps> = ({
                             {displayedMovements.map(m => (
                                 <tr key={m.id} className="hover:bg-slate-50 transition-colors">
                                     <td className="px-4 py-3 font-black text-slate-400 tracking-tighter text-xs">{m.sequentialId}</td>
+                                    <td className="px-4 py-3 font-mono text-slate-500 text-[10px]">{m.globalId ? m.globalId.substring(0, 8) : '---'}</td>
                                     <td className="px-4 py-3 font-bold text-slate-500 text-xs">{m.time}</td>
                                     <td className="px-4 py-3 font-black uppercase text-slate-800 dark:text-slate-200">
                                         <div className="truncate max-w-[450px] text-xs">{m.concept}</div>
                                     </td>
                                     <td className="px-4 py-3 font-bold uppercase text-slate-600 text-[11px]">{m.paymentMethod}</td>
+                                    <td className="px-4 py-3 font-mono text-slate-600 uppercase text-xs">
+                                        {m.concept.includes('VENTA') && m.concept.includes('#') ? m.concept.split('#')[1] : ''}
+                                    </td>
                                     <td className="px-4 py-3 font-mono text-primary-600 uppercase text-xs">{m.referenceId || ''}</td>
                                     <td className={`px-4 py-3 text-right font-black text-sm ${m.type === 'Ingreso' ? 'text-emerald-600' : 'text-red-500'}`}>
                                         {m.type === 'Ingreso' ? '+' : '-'} {m.amount.toFixed(2)}
@@ -867,10 +876,10 @@ export const CashModule: React.FC<CashModuleProps> = ({
                                 <div className="bg-white w-[280px] p-6 shadow-sm font-mono text-[10px] text-black mx-auto shrink-0 tabular-nums border-x border-slate-200">
                                     <div className="text-center mb-4 pb-2 border-b-2 border-dashed border-black">
                                         <h2 className="font-bold text-xs uppercase tracking-tighter">SapiSoft ERP</h2>
-                                        <p className="text-[8px] text-black font-bold uppercase">COMPROBANTE DE VENTA</p>
+                                        <p className="text-[8px] text-black font-bold uppercase">TICKET DE VENTA</p>
                                     </div>
                                     <div className="mb-3 space-y-0.5 text-black">
-                                        <div className="flex justify-between"><span>Comprobante:</span> <span className="font-bold">{linkedRecord.correlativeId || `#${linkedRecord.id.substring(0,8)}`}</span></div>
+                                        <div className="flex justify-between"><span>Venta:</span> <span className="font-bold">#{linkedRecord.correlativeId || linkedRecord.id.substring(0,8)}</span></div>
                                         <div className="flex justify-between"><span>Fecha:</span> <span className="font-bold">{linkedRecord.date} {linkedRecord.time}</span></div>
                                         <div className="flex justify-between"><span>Cliente:</span> <span className="font-bold truncate max-w-[150px]">{linkedRecord.clientName}</span></div>
                                         <div className="flex justify-between"><span>Doc:</span> <span className="uppercase font-bold">{linkedRecord.docType}</span></div>
@@ -878,13 +887,13 @@ export const CashModule: React.FC<CashModuleProps> = ({
                                     
                                     <div className="border-y border-dashed border-black py-2 mb-3">
                                         <div className="grid grid-cols-[1fr_22px_40px_45px] font-black text-[8px] mb-1 border-b border-black pb-1 uppercase text-black"><span>Articulo</span><span className="text-center">Cant</span><span className="text-right">Unit</span><span className="text-right">Total</span></div>
-                                        {linkedRecord.items && linkedRecord.items.map((item: any, idx: number) => (
+                                        {linkedRecord.items.map((item: CartItem, idx: number) => (
                                             <div key={idx} className="mb-1 last:mb-0 leading-tight text-black">
                                                 <div className="grid grid-cols-[1fr_22px_40px_45px]">
                                                     <span className="uppercase truncate pr-1 font-bold">{item.name}</span>
                                                     <span className="text-center font-black">{item.quantity}</span>
-                                                    <span className="text-right font-medium">{Number(item.price).toFixed(0)}</span>
-                                                    <span className="text-right font-black">{Number(item.price * item.quantity).toFixed(0)}</span>
+                                                    <span className="text-right font-medium">{item.price.toFixed(0)}</span>
+                                                    <span className="text-right font-black">{(item.price * item.quantity).toFixed(0)}</span>
                                                 </div>
                                             </div>
                                         ))}
@@ -947,6 +956,7 @@ export const CashModule: React.FC<CashModuleProps> = ({
                                         <div className="flex justify-between"><span>Fecha:</span> <span className="font-bold">{selectedMovement.date} {selectedMovement.time}</span></div>
                                         <div className="flex justify-between"><span>Usuario:</span> <span className="font-bold uppercase">{selectedMovement.user}</span></div>
                                         <div className="flex justify-between"><span>Tipo:</span> <span className="font-black uppercase">{selectedMovement.type}</span></div>
+                                        {selectedMovement.globalId && <div className="flex justify-between"><span>Nro SaaS:</span> <span className="font-bold">#{selectedMovement.globalId}</span></div>}
                                     </div>
                                     
                                     <div className="border-y border-dashed border-black py-4 mb-3 text-center">

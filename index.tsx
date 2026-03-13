@@ -14,7 +14,7 @@ try {
         <App />
       </React.StrictMode>
     );
-    console.log("SapiSoft ERP: Application Mounted Successfully");
+// SapiSoft ERP: Application Mounted Successfully
 } catch (error) {
     console.error("SapiSoft ERP: Critical Mounting Error:", error);
     // This will bubble up and be caught by the global error handler in index.html

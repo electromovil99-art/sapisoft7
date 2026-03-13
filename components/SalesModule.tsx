@@ -360,7 +360,7 @@ export const SalesModule: React.FC<SalesModuleProps> = ({
       if (paymentAmountRef.current) paymentAmountRef.current.focus();
   };
 
-  const handleProcessSaleRequest = () => {
+  const handleProcessSaleRequest = async () => {
     if (mode === 'SALE' && !isCashBoxOpen) {
         alert("⛔ CAJA CERRADA\n\nNo puede procesar ventas porque la caja no ha sido aperturada.\nPor favor vaya al módulo de Caja y abra su turno.");
         return;
@@ -375,7 +375,7 @@ export const SalesModule: React.FC<SalesModuleProps> = ({
         setSendToWallet(!!(client && client.name !== 'CLIENTE VARIOS'));
         setShowPaymentModal(true);
     } else {
-        const result = onProcessSale([...cart], safeTotal, fullDocType, client?.name || 'CLIENTE VARIOS', { cash: 0, yape: 0, card: 0, bank: 0, wallet: 0 }, '', [], currency, parseFloat(exchangeRate || '1'));
+        const result = await onProcessSale([...cart], safeTotal, fullDocType, client?.name || 'CLIENTE VARIOS', { cash: 0, yape: 0, card: 0, bank: 0, wallet: 0 }, '', [], currency, parseFloat(exchangeRate || '1'));
         setTicketData({ id: result?.correlativeId || 'CR-' + Date.now(), globalId: result?.globalId, date: new Date().toLocaleDateString('es-PE'), time: new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false }), client: client || { name: 'CLIENTE VARIOS', dni: '00000000' }, docType: fullDocType, items: [...cart], total: safeTotal, subtotal: safeTotal / 1.18, igv: safeTotal - (safeTotal / 1.18), currency, condition: 'CRÉDITO (' + creditDays + ' DÍAS)', payments: [] });
         setCart([]); setClient(null); setClientSearchTerm('CLIENTE VARIOS'); setDocNumber(''); setShowTicket(true);
     }
@@ -412,7 +412,7 @@ export const SalesModule: React.FC<SalesModuleProps> = ({
       onAddPresale(presale); setCart([]); setClient(null); setClientSearchTerm('CLIENTE VARIOS'); setShowPresaleModal(false); if(onCancel) onCancel(); alert(`Preventa guardada. Fecha de entrega pactada: ${presaleDeliveryDate}.`);
   };
 
-  const handleFinalizeSale = () => {
+  const handleFinalizeSale = async () => {
       if (getPaymentTotal() < total - 0.05) return alert("Falta completar el pago.");
       const ticketId = Math.floor(Math.random() * 1000000).toString();
       const fullDocType = docType + (docNumber ? ` #${docNumber}` : '');
@@ -460,7 +460,7 @@ export const SalesModule: React.FC<SalesModuleProps> = ({
           wallet: paymentsForRecord.filter(p => p.method === 'Saldo Favor').reduce((a, b) => a + b.amount, 0) 
       };
       
-      const result = onProcessSale([...cart], total, fullDocType, client?.name || 'CLIENTE VARIOS', b, '', paymentsForRecord, currency, parseFloat(exchangeRate));
+      const result = await onProcessSale([...cart], total, fullDocType, client?.name || 'CLIENTE VARIOS', b, '', paymentsForRecord, currency, parseFloat(exchangeRate));
       
       if (finalExcess > 0 && sendToWallet && client && client.name !== 'CLIENTE VARIOS' && onUpdateClientBalance) {
           onUpdateClientBalance(client.id, finalExcess, `VUELTO TICKET #${result?.correlativeId || ticketId}`, depositMethod, depositAccount);
@@ -974,7 +974,7 @@ export const SalesModule: React.FC<SalesModuleProps> = ({
                             </div>
                             <div className="mb-3 space-y-0.5 text-black">
                                 <div className="flex justify-between"><span>Venta:</span> <span className="font-bold">#{ticketData.id}</span></div>
-                                {ticketData.globalId && <div className="flex justify-between"><span>SaaS ID:</span> <span className="font-bold">#{ticketData.globalId}</span></div>}
+                                {ticketData.globalId && <div className="flex justify-between"><span>Nro SaaS:</span> <span className="font-bold">#{ticketData.globalId}</span></div>}
                                 <div className="flex justify-between"><span>Fecha:</span> <span className="font-bold">{ticketData.date}</span></div>
                                 <div className="flex justify-between"><span>Cliente:</span> <span className="font-bold truncate max-w-[150px]">{ticketData.client.name}</span></div>
                                 <div className="flex justify-between"><span>Doc:</span> <span className="uppercase font-bold">{ticketData.docType}</span></div>
@@ -1042,7 +1042,7 @@ export const SalesModule: React.FC<SalesModuleProps> = ({
                         <div className="a4-preview-container bg-white p-12 shadow-sm font-sans text-xs text-slate-800 mx-auto min-h-[1100px] flex flex-col shrink-0">
                             <div className="flex justify-between items-start mb-8 border-b-2 border-blue-600 pb-6">
                                 <div className="space-y-1"><h1 className="text-2xl font-black text-blue-600 uppercase tracking-tighter">SapiSoft ERP</h1><p className="font-bold text-slate-500 uppercase">{ticketData.docType === 'PRE-CUENTA / PROFORMA' ? 'PRE-CUENTA DE VENTA' : 'SISTEMA INTEGRAL DE VENTAS'}</p></div>
-                                <div className="bg-slate-50 border-2 border-slate-200 p-4 rounded-xl text-center min-w-[200px]"><p className="bg-blue-600 text-white py-1 px-2 font-black text-[10px] rounded mb-1 uppercase">{ticketData.docType}</p><p className="font-mono text-lg font-black">{ticketData.id}</p>{ticketData.globalId && <p className="font-mono text-xs text-slate-500 mt-1">SaaS ID: {ticketData.globalId}</p>}</div>
+                                <div className="bg-slate-50 border-2 border-slate-200 p-4 rounded-xl text-center min-w-[200px]"><p className="bg-blue-600 text-white py-1 px-2 font-black text-[10px] rounded mb-1 uppercase">{ticketData.docType}</p><p className="font-mono text-lg font-black">{ticketData.correlativeId || ticketData.id}</p>{ticketData.globalId && <p className="font-mono text-xs text-slate-500 mt-1">Nro SaaS: {ticketData.globalId}</p>}</div>
                             </div>
                             <div className="grid grid-cols-2 gap-8 mb-8">
                                 <div className="bg-slate-50 p-4 rounded-xl border border-slate-200"><p className="text-[9px] font-black text-blue-600 uppercase mb-2 border-b pb-1">Datos del Cliente</p><p className="font-black text-sm uppercase">{ticketData.client.name}</p><p><strong>Identificación:</strong> {ticketData.client.dni}</p></div>
