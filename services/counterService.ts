@@ -28,6 +28,19 @@ export const getNextModuleId = async (
 };
 
 /**
+ * Obtiene el siguiente ID global para transacciones (SaaS ID).
+ */
+export const getNextGlobalTransactionId = async (): Promise<string> => {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('increment_global_counter', {
+    p_counter_name: 'global_transaction'
+  });
+
+  if (error) throw error;
+  return String(data);
+};
+
+/**
  * Obtiene el siguiente ID global para Soporte Técnico.
  */
 export const getNextGlobalSupportId = async (): Promise<string> => {

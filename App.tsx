@@ -69,7 +69,7 @@ import {
   getNextSequence 
 } from './utils/traceability';
 
-import { getNextModuleId, getNextGlobalSupportId } from './services/counterService';
+import { getNextModuleId, getNextGlobalSupportId, getNextGlobalTransactionId } from './services/counterService';
 
 import { syncDataToSupabase, deleteDataFromSupabase, fetchDataFromSupabase, subscribeToSupabaseChanges } from './services/supabaseService';
 
@@ -556,7 +556,7 @@ const App = () => {
 
   const handleProcessSale = async (cart: CartItem[], total: number, docType: string, clientName: string, paymentBreakdown: PaymentBreakdown, ticketId: string, detailedPayments: any[], currency: string, exchangeRate: number) => {
       // Generate Traceability IDs
-      const globalId = generateUUID();
+      const globalId = await getNextGlobalTransactionId();
       
       const companyId = session?.user.companyName || 'SapiSoft Demo';
       const branchId = currentBranchId;
@@ -698,7 +698,7 @@ const App = () => {
   };
 
   const handleProcessPurchase = async (cart: CartItem[], total: number, docType: string, supplierName: string, paymentCondition: 'Contado' | 'Credito', creditDays: number, detailedPayments: any[], currency?: string, exchangeRate?: number) => {
-      const globalId = generateUUID();
+      const globalId = await getNextGlobalTransactionId();
       
       const companyId = session?.user.companyName || 'SapiSoft Demo';
       const branchId = currentBranchId;

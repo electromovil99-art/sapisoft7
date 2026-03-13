@@ -3,6 +3,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Plus, Minus, Wallet, Banknote, QrCode, Landmark, CreditCard, Eye, X, Lock, Unlock, CheckCircle, Printer, RotateCcw, ArrowRightLeft, Calculator, FileText, AlertTriangle, ChevronRight, ArrowRight, Tag, Layers, Hash, Layout, FileText as FileIcon, Clock, ChevronDown, User, Info, Fingerprint, ShoppingCart, ShoppingBag } from 'lucide-react';
 import { CashMovement, PaymentMethodType, BankAccount, SaleRecord, PurchaseRecord, CartItem, CashBoxSession } from '../types';
 import { generateUUID } from '../utils/traceability';
+import { getNextGlobalTransactionId } from '../services/counterService';
 
 interface CashModuleProps {
     movements: CashMovement[];
@@ -470,13 +471,14 @@ export const CashModule: React.FC<CashModuleProps> = ({
       return (currentSession?.countedOpening || 0) + diffSinceOpen;
   }, [activeMovements, currentSession]);
 
-  const handleSaveMovement = (type: 'Ingreso' | 'Egreso') => {
+  const handleSaveMovement = async (type: 'Ingreso' | 'Egreso') => {
       if (!amount || !concept || !financialType) return alert("Complete los campos obligatorios.");
       const finalCategory = financialType === 'Fijo' ? category.toUpperCase() : 'VARIABLE';
+      const globalId = await getNextGlobalTransactionId();
 
       onAddMovement({ 
         id: 'M-' + Date.now(), 
-        globalId: generateUUID(),
+        globalId: globalId,
         date: todayStr, 
         time: new Date().toLocaleTimeString('es-PE', { hour12: false }), 
         type, paymentMethod, concept: concept.toUpperCase(), amount: parseFloat(amount), 
