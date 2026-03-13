@@ -76,9 +76,9 @@ export const AgendaModule: React.FC = () => {
             setNewTask({ title: '', notes: '', dueDate: new Date().toISOString().split('T')[0], priority: 'MEDIA' });
             setEditingTask(null);
             setIsModalOpen(false);
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error saving task:", error);
-            alert("Error al guardar la tarea");
+            alert(`Error al guardar la tarea: ${error.message || 'Error desconocido'}`);
         }
     };
 
