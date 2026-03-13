@@ -64,15 +64,15 @@ export const AgendaModule: React.FC = () => {
     const handleSaveTask = async () => {
         if (!newTask.title || !newTask.dueDate) return alert("Complete título y fecha");
         
-        const taskToSave = {
+        const { createdAt, ...taskWithoutCreatedAt } = {
             ...editingTask,
             ...newTask,
             status: editingTask ? editingTask.status : 'PENDIENTE',
             created_at: editingTask ? (editingTask as any).created_at || (editingTask as any).createdAt : new Date().toISOString()
-        } as Task;
+        } as any;
 
         try {
-            await syncDataToSupabase('tasks', [taskToSave]);
+            await syncDataToSupabase('tasks', [taskWithoutCreatedAt]);
             setNewTask({ title: '', notes: '', dueDate: new Date().toISOString().split('T')[0], priority: 'MEDIA' });
             setEditingTask(null);
             setIsModalOpen(false);
