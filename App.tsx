@@ -664,6 +664,7 @@ const App = () => {
                   }
               });
               setCurrentCashSession(updatedSession);
+              setCashBoxSessions(prev => prev.map(s => s.id === updatedSession.id ? updatedSession : s));
               syncToSupabase('cash_box_sessions', updatedSession);
           }
       }
