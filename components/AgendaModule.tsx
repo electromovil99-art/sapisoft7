@@ -131,12 +131,18 @@ export const AgendaModule: React.FC = () => {
                             <p className="text-slate-500 text-[10px] truncate">{task.notes} • {task.dueDate}</p>
                         </div>
                         <div className="flex items-center gap-1 flex-shrink-0">
-                            <select className="text-[10px] p-0.5 bg-slate-100 rounded w-16" value={task.status} onChange={e => syncDataToSupabase('tasks', [{...task, status: e.target.value as any}])}>
+                            <select className="text-[10px] p-0.5 bg-slate-100 rounded w-16" value={task.status} onChange={e => {
+                                const { dueDate, createdAt, ...taskWithoutOldFields } = task as any;
+                                syncDataToSupabase('tasks', [{...taskWithoutOldFields, status: e.target.value as any}]);
+                            }}>
                                 <option value="PENDIENTE">Pendiente</option>
                                 <option value="EN_PROCESO">Proceso</option>
                                 <option value="COMPLETADA">Hecho</option>
                             </select>
-                            <select className="text-[10px] p-0.5 bg-slate-100 rounded w-12" value={task.priority} onChange={e => syncDataToSupabase('tasks', [{...task, priority: e.target.value as any}])}>
+                            <select className="text-[10px] p-0.5 bg-slate-100 rounded w-12" value={task.priority} onChange={e => {
+                                const { dueDate, createdAt, ...taskWithoutOldFields } = task as any;
+                                syncDataToSupabase('tasks', [{...taskWithoutOldFields, priority: e.target.value as any}]);
+                            }}>
                                 <option value="BAJA">Baja</option>
                                 <option value="MEDIA">Media</option>
                                 <option value="ALTA">Alta</option>
