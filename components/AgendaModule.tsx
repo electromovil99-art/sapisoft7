@@ -96,6 +96,10 @@ export const AgendaModule: React.FC = () => {
     const handleDeleteTask = async (taskId: string) => {
         try {
             await deleteDataFromSupabase('tasks', taskId);
+            
+            // Recargar tareas para asegurar que la UI se actualice
+            const data = await fetchDataFromSupabase('tasks');
+            setTasks(data || []);
         } catch (error) {
             console.error("Error deleting task:", error);
             alert("Error al eliminar la tarea");
