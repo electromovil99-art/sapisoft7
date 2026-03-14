@@ -30,25 +30,34 @@ export const getNextModuleId = async (
 /**
  * Obtiene el siguiente ID global para transacciones (SaaS ID).
  */
-export const getNextGlobalTransactionId = async (): Promise<string> => {
-  const supabase = getSupabase();
-  const { data, error } = await supabase.rpc('increment_global_counter', {
-    p_counter_name: 'global_transaction'
-  });
+export const getNextGlobalTransactionId = async (): Promise<string | null> => {
+  try {
+    const supabase = getSupabase();
+    const { data, error } = await supabase.rpc('increment_global_counter', {
+      p_counter_name: 'global_transaction'
+    });
 
-  if (error) throw error;
-  return String(data);
+    if (error) throw error;
+    return String(data);
+  } catch (e) {
+    console.warn("Offline: El ID Global se generará al sincronizar con el servidor");
+    return null;
+  }
 };
 
 /**
  * Obtiene el siguiente ID global para Soporte Técnico.
  */
 export const getNextGlobalSupportId = async (): Promise<string> => {
-  const supabase = getSupabase();
-  const { data, error } = await supabase.rpc('increment_global_counter', {
-    p_counter_name: 'soporte_tecnico'
-  });
+  try {
+    const supabase = getSupabase();
+    const { data, error } = await supabase.rpc('increment_global_counter', {
+      p_counter_name: 'soporte_tecnico'
+    });
 
-  if (error) throw error;
-  return String(data).padStart(6, '0');
+    if (error) throw error;
+    return String(data).padStart(6, '0');
+  } catch (e) {
+    return `SOP-${Date.now()}`;
+  }
 };

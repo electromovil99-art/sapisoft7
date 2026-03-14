@@ -13,7 +13,8 @@ import {
 import { 
     Tenant, SystemUser, IndustryType, PlanType, TenantInvoice, 
     MasterAccount, MasterMovement, PaymentMethodType, VideoTutorial,
-    SaleRecord, PurchaseRecord, CashMovement, ServiceOrder, Quotation, Presale
+    SaleRecord, PurchaseRecord, CashMovement, ServiceOrder, Quotation, Presale,
+    Product, Client
 } from '../types';
 
 interface SuperAdminModuleProps {
@@ -34,10 +35,12 @@ interface SuperAdminModuleProps {
     services?: ServiceOrder[];
     quotations?: Quotation[];
     presales?: Presale[];
+    products?: Product[];
+    clients?: Client[];
     onRecorrelateHistory: () => Promise<void>;
 }
 
-type MainTab = 'BUSINESSES' | 'COLLECTIONS' | 'HISTORY' | 'ANALYTICS' | 'BROADCAST' | 'VIDEOS' | 'TRACEABILITY';
+type MainTab = 'BUSINESSES' | 'COLLECTIONS' | 'HISTORY' | 'ANALYTICS' | 'BROADCAST' | 'VIDEOS' | 'TRACEABILITY' | 'AUDIT';
 
 const PLAN_PRICES: Record<PlanType, number> = {
     'BASICO': 39,
@@ -78,11 +81,15 @@ export const SuperAdminModule: React.FC<SuperAdminModuleProps> = ({
     services = [],
     quotations = [],
     presales = [],
+    products = [],
+    clients = [],
     onRecorrelateHistory
 }) => {
     const [activeMainTab, setActiveMainTab] = useState<MainTab>('BUSINESSES');
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
+    const [auditUserFilter, setAuditUserFilter] = useState('ALL');
+    const [auditDateFilter, setAuditDateFilter] = useState(new Date().toISOString().split('T')[0]);
     
     // --- TRACEABILITY LOGIC ---
     const traceabilityList = useMemo(() => {
@@ -91,8 +98,10 @@ export const SuperAdminModule: React.FC<SuperAdminModuleProps> = ({
             ...purchases.map(p => ({ ...p, type: 'COMPRA', ref: p.correlativeId || p.id, amount: p.total, tenant: p.tenantId || 'SapiSoft Demo' })),
             ...cashMovements.map(m => ({ ...m, type: m.type === 'Ingreso' ? 'INGRESO' : 'EGRESO', ref: m.concept, amount: m.amount, tenant: m.tenantId || 'SapiSoft Demo' })),
             ...services.map(s => ({ ...s, type: 'SERVICIO', ref: s.correlativeId || s.id, amount: s.cost, tenant: s.tenantId || 'SapiSoft Demo' })),
-            ...quotations.map(q => ({ ...q, type: 'COTIZACION', ref: q.id, amount: q.total, tenant: 'SapiSoft Demo' })), // Quotations might not have tenantId yet
-            ...presales.map(p => ({ ...p, type: 'PREVENTA', ref: p.id, amount: p.total, tenant: 'SapiSoft Demo' }))
+            ...quotations.map(q => ({ ...q, type: 'COTIZACION', ref: q.id, amount: q.total, tenant: 'SapiSoft Demo' })),
+            ...presales.map(p => ({ ...p, type: 'PREVENTA', ref: p.id, amount: p.total, tenant: 'SapiSoft Demo' })),
+            ...products.map(p => ({ ...p, type: 'PRODUCTO', ref: p.name, amount: p.price, tenant: 'SapiSoft Demo', date: (p as any).entryDate || (p as any).date || 'N/A', time: (p as any).entryTime || (p as any).time || 'N/A', user: p.updatedBy || 'SISTEMA' })),
+            ...clients.map(c => ({ ...c, type: 'CLIENTE', ref: c.name, amount: c.totalPurchases, tenant: 'SapiSoft Demo', date: (c as any).entryDate || (c as any).date || 'N/A', time: (c as any).entryTime || (c as any).time || 'N/A', user: c.updatedBy || 'SISTEMA' }))
         ].filter(item => item.globalId); // Only show items with Global ID
 
         return allItems.sort((a, b) => {
@@ -101,7 +110,32 @@ export const SuperAdminModule: React.FC<SuperAdminModuleProps> = ({
             const idB = parseInt(b.globalId?.replace(/\D/g, '') || '0');
             return idB - idA;
         });
-    }, [sales, purchases, cashMovements, services, quotations, presales]);
+    }, [sales, purchases, cashMovements, services, quotations, presales, products, clients]);
+
+    const auditList = useMemo(() => {
+        return traceabilityList.filter(item => {
+            const itemUser = (item as any).updatedBy || (item as any).user;
+            const matchesUser = auditUserFilter === 'ALL' || itemUser === auditUserFilter;
+            // Convert item.date (DD/MM/YYYY) to YYYY-MM-DD for comparison
+            let itemDate = '';
+            const rawDate = (item as any).date;
+            if (rawDate && rawDate.includes('/')) {
+                const [d, m, y] = rawDate.split('/');
+                itemDate = `${y}-${m}-${d}`;
+            }
+            const matchesDate = !auditDateFilter || itemDate === auditDateFilter;
+            return matchesUser && matchesDate;
+        });
+    }, [traceabilityList, auditUserFilter, auditDateFilter]);
+
+    const uniqueUsers = useMemo(() => {
+        const users = new Set<string>();
+        traceabilityList.forEach(item => {
+            const itemUser = (item as any).updatedBy || (item as any).user;
+            if (itemUser) users.add(itemUser);
+        });
+        return Array.from(users);
+    }, [traceabilityList]);
     
     // --- ESTADOS DE GESTIÓN ---
     const [selectedInvoiceForManual, setSelectedInvoiceForManual] = useState<TenantInvoice | null>(null);
@@ -282,7 +316,7 @@ export const SuperAdminModule: React.FC<SuperAdminModuleProps> = ({
         };
 
         const adminUser: SystemUser = {
-            id: 'USR-' + newTenant.id, username: formData.username, password: formData.password,
+            id: Date.now().toString(), username: formData.username, password: formData.password,
             fullName: formData.ownerName || 'Admin Instance', role: 'ADMIN', active: true, permissions: ['ALL'],
             industry: formData.industry, companyName: newTenant.companyName, email: formData.email
         };
@@ -350,6 +384,9 @@ export const SuperAdminModule: React.FC<SuperAdminModuleProps> = ({
                     </button>
                     <button onClick={() => setActiveMainTab('TRACEABILITY')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-2 whitespace-nowrap ${activeMainTab === 'TRACEABILITY' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}>
                         <ActivityIcon size={14}/> Trazabilidad
+                    </button>
+                    <button onClick={() => setActiveMainTab('AUDIT')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-2 whitespace-nowrap ${activeMainTab === 'AUDIT' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}>
+                        <ShieldCheck size={14}/> Auditoría de Cambios
                     </button>
                     <button onClick={onRecorrelateHistory} className="px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-2 whitespace-nowrap bg-red-600 text-white hover:bg-red-700">
                         <RefreshCcw size={14}/> Correlacionar Historial
@@ -540,6 +577,115 @@ export const SuperAdminModule: React.FC<SuperAdminModuleProps> = ({
                                 )}
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            )}
+
+            {activeMainTab === 'AUDIT' && (
+                <div className="flex-1 flex flex-col gap-4 min-h-0 animate-in fade-in">
+                    <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border overflow-hidden flex flex-col shadow-sm flex-1">
+                        <div className="p-6 border-b flex items-center justify-between bg-slate-50/30 px-8">
+                            <div className="flex items-center gap-6 flex-1">
+                                <div className="flex items-center gap-2">
+                                    <label className="text-[10px] font-black uppercase text-slate-400">Filtrar por Usuario:</label>
+                                    <select 
+                                        className="bg-white dark:bg-slate-800 border rounded-xl px-4 py-2 text-xs font-black outline-none focus:border-indigo-500 uppercase"
+                                        value={auditUserFilter}
+                                        onChange={e => setAuditUserFilter(e.target.value)}
+                                    >
+                                        <option value="ALL">TODOS LOS USUARIOS</option>
+                                        {uniqueUsers.map(u => (
+                                            <option key={u} value={u}>{u.toUpperCase()}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <label className="text-[10px] font-black uppercase text-slate-400">Fecha de Auditoría:</label>
+                                    <input 
+                                        type="date" 
+                                        className="bg-white dark:bg-slate-800 border rounded-xl px-4 py-2 text-xs font-black outline-none focus:border-indigo-500"
+                                        value={auditDateFilter}
+                                        onChange={e => setAuditDateFilter(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <div className="flex flex-col items-end">
+                                    <span className="text-[10px] font-black uppercase text-slate-400">Movimientos Auditados</span>
+                                    <span className="text-xl font-black text-slate-900 dark:text-white">{auditList.length}</span>
+                                </div>
+                                <div className="w-10 h-10 bg-slate-900 text-white rounded-xl flex items-center justify-center">
+                                    <ShieldCheck size={20}/>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex-1 overflow-auto">
+                            <table className="w-full text-left text-[10px]">
+                                <thead className="bg-slate-50 dark:bg-slate-800 text-slate-400 font-black uppercase tracking-widest border-b sticky top-0 z-10">
+                                    <tr>
+                                        <th className="px-6 py-4">ID Global</th>
+                                        <th className="px-6 py-4">Usuario Responsable</th>
+                                        <th className="px-6 py-4">Módulo / Acción</th>
+                                        <th className="px-6 py-4">Referencia del Cambio</th>
+                                        <th className="px-6 py-4">Monto/Valor</th>
+                                        <th className="px-6 py-4">Fecha y Hora</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                    {auditList.map((item, idx) => (
+                                        <tr key={item.globalId || idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+                                            <td className="px-6 py-4">
+                                                <span className="font-black text-indigo-600">#{item.globalId}</span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center border">
+                                                        <User size={14} className="text-slate-500"/>
+                                                    </div>
+                                                    <span className="font-black text-slate-700 dark:text-slate-300 uppercase">{(item as any).updatedBy || (item as any).user || 'SISTEMA'}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className={`px-2 py-1 rounded-lg font-black text-[9px] border uppercase ${
+                                                    item.type === 'VENTA' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                                    item.type === 'COMPRA' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                                                    item.type === 'INGRESO' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                                    item.type === 'EGRESO' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                                                    item.type === 'PRODUCTO' ? 'bg-purple-50 text-purple-600 border-purple-100' :
+                                                    item.type === 'CLIENTE' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
+                                                    'bg-slate-50 text-slate-600 border-slate-100'
+                                                }`}>
+                                                    {item.type}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className="text-slate-500 font-bold truncate max-w-[250px] block uppercase">{item.ref}</span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className="font-black text-slate-800 dark:text-white">S/ {item.amount?.toLocaleString()}</span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex flex-col">
+                                                    <span className="font-black text-slate-700 dark:text-slate-300">{(item as any).date}</span>
+                                                    <span className="text-slate-400 text-[9px] font-bold">{(item as any).time}</span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {auditList.length === 0 && (
+                                        <tr>
+                                            <td colSpan={6} className="px-6 py-32 text-center">
+                                                <div className="flex flex-col items-center gap-3 opacity-20">
+                                                    <ShieldAlert size={64} className="text-slate-400"/>
+                                                    <span className="font-black uppercase text-xl tracking-tighter">No se detectaron movimientos sospechosos</span>
+                                                    <p className="text-xs font-bold max-w-xs">Ajusta los filtros de usuario o fecha para auditar otros periodos.</p>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             )}

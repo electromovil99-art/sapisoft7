@@ -80,6 +80,28 @@ const App = () => {
 
   // --- SUPABASE REALTIME SYNC ---
   useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        const data = await fetchDataFromSupabase('system_users');
+        if (data && data.length > 0) {
+          const hasAdmin = data.some((u: any) => u.username?.toUpperCase() === 'ADMIN');
+          const hasSuper = data.some((u: any) => u.username?.toUpperCase() === 'SUPER');
+          
+          let finalUsers = [...data];
+          if (!hasAdmin) {
+            finalUsers.push({ id: '1', username: 'ADMIN', password: '123', fullName: 'Administrador Principal', role: 'ADMIN', active: true, permissions: ['ALL'], companyName: 'SapiSoft Demo', industry: 'TECH' });
+          }
+          if (!hasSuper) {
+            finalUsers.push({ id: '2', username: 'SUPER', password: '123', fullName: 'Super Admin', role: 'SUPER_ADMIN', active: true, permissions: ['ALL'], companyName: 'SapiSoft Corp', industry: 'TECH' });
+          }
+          setUsers(finalUsers);
+        }
+      } catch (e) {
+        console.error("Error fetching users:", e);
+      }
+    };
+    loadUsers();
+
     const loadSales = async () => {
       try {
         const data = await fetchDataFromSupabase('sales');
@@ -109,6 +131,16 @@ const App = () => {
       }
     };
     loadCashMovements();
+
+    const subscriptionUsers = subscribeToSupabaseChanges('system_users', (payload) => {
+      if (payload.eventType === 'INSERT') {
+        setUsers(prev => [payload.new, ...prev]);
+      } else if (payload.eventType === 'UPDATE') {
+        setUsers(prev => prev.map(u => u.id === payload.new.id ? payload.new : u));
+      } else if (payload.eventType === 'DELETE') {
+        setUsers(prev => prev.filter(u => u.id !== payload.old.id));
+      }
+    });
 
     const subscription = subscribeToSupabaseChanges('sales', (payload) => {
       if (payload.eventType === 'INSERT') {
@@ -144,6 +176,7 @@ const App = () => {
       subscription.unsubscribe();
       subscriptionSessions.unsubscribe();
       subscriptionMovements.unsubscribe();
+      subscriptionUsers.unsubscribe();
     };
   }, []);
 
@@ -1150,15 +1183,15 @@ const App = () => {
   const handleResetLocations = () => setLocations(MOCK_LOCATIONS);
   const handleAddUser = (u: SystemUser) => {
       setUsers(prev => [...prev, u]);
-      syncToSupabase('users', u);
+      syncToSupabase('system_users', u);
   };
   const handleUpdateUser = (u: SystemUser) => {
       setUsers(prev => prev.map(usr => usr.id === u.id ? u : usr));
-      syncToSupabase('users', u);
+      syncToSupabase('system_users', u);
   };
   const handleDeleteUser = (id: string) => {
       setUsers(prev => prev.filter(u => u.id !== id));
-      syncToSupabase('users', id, true);
+      syncToSupabase('system_users', id, true);
   };
   const handleAddBankAccount = (b: BankAccount) => {
       setBankAccounts(prev => [...prev, b]);
@@ -1496,7 +1529,7 @@ const App = () => {
       {currentView === ViewState.DATABASE_CONFIG && <DatabaseModule isSyncEnabled={isSyncEnabled} data={{ products, clients, movements: cashMovements, sales, services, suppliers, brands, categories, bankAccounts, cashBoxSessions }} onSyncDownload={handleSyncDownload} />}
       {currentView === ViewState.CONFIG_PRINTER && <PrintConfigModule />}
       {currentView === ViewState.MEDIA_EDITOR && <MediaEditorModule onUpdateHeroImage={() => {}} onUpdateFeatureImage={() => {}} />}
-      {currentView === ViewState.SUPER_ADMIN_DASHBOARD && <SuperAdminModule tenants={tenants} onAddTenant={handleAddTenant} onUpdateTenant={handleUpdateTenant} onDeleteTenant={handleDeleteTenant} onResetTenantData={handleResetTenantData} sales={sales} purchases={purchases} cashMovements={cashMovements} services={services} quotations={quotations} presales={presales} onRecorrelateHistory={recorrelateHistory} />}
+      {currentView === ViewState.SUPER_ADMIN_DASHBOARD && <SuperAdminModule tenants={tenants} onAddTenant={handleAddTenant} onUpdateTenant={handleUpdateTenant} onDeleteTenant={handleDeleteTenant} onResetTenantData={handleResetTenantData} sales={sales} purchases={purchases} cashMovements={cashMovements} services={services} quotations={quotations} presales={presales} products={products} clients={clients} onRecorrelateHistory={recorrelateHistory} />}
       {currentView === ViewState.CASH_BOX_HISTORY && <CashBoxHistoryModule sessions={cashBoxSessions} bankAccounts={bankAccounts} />}
       {currentView === ViewState.BANK_ACCOUNTS && <BankAccountsModule bankAccounts={bankAccounts} onAddBankAccount={handleAddBankAccount} onUpdateBankAccount={handleUpdateBankAccount} onDeleteBankAccount={handleDeleteBankAccount} onUniversalTransfer={handleUniversalTransfer} />}
       {currentView === ViewState.BANK_HISTORY && <BankHistoryModule cashMovements={cashMovements} bankAccounts={bankAccounts} />}

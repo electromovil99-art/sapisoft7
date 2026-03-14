@@ -115,8 +115,13 @@ export const UserPrivilegesModule: React.FC<UserPrivilegesModuleProps> = ({ user
             : formData.permissions || [];
 
         if (editingId === 'NEW') {
+            // Calcular el siguiente ID correlativo
+            const maxCorrelative = users.reduce((max, u) => Math.max(max, u.correlativeId || 0), 0);
+            const nextCorrelative = maxCorrelative + 1;
+
             const newUser: SystemUser = {
-                id: `USR-${Date.now()}`,
+                id: Date.now().toString(),
+                correlativeId: nextCorrelative,
                 fullName: formData.fullName,
                 username: formData.username.toUpperCase(),
                 password: formData.password || '123456',
@@ -216,7 +221,9 @@ export const UserPrivilegesModule: React.FC<UserPrivilegesModuleProps> = ({ user
                                 {user.fullName.charAt(0).toUpperCase()}
                             </div>
                             <div className="min-w-0 flex-1">
-                                <div className={`font-bold text-xs truncate ${editingId === user.id ? 'text-primary-700 dark:text-primary-300' : 'text-slate-700 dark:text-slate-200'}`}>{user.fullName}</div>
+                                <div className={`font-bold text-xs truncate ${editingId === user.id ? 'text-primary-700 dark:text-primary-300' : 'text-slate-700 dark:text-slate-200'}`}>
+                                    {user.correlativeId ? `#${user.correlativeId} ` : ''}{user.fullName}
+                                </div>
                                 <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">{user.role}</div>
                             </div>
                             {user.role === 'ADMIN' && <Shield size={12} className="text-amber-500"/>}
@@ -246,7 +253,7 @@ export const UserPrivilegesModule: React.FC<UserPrivilegesModuleProps> = ({ user
                                     {editingId === 'NEW' ? 'Crear Nuevo Usuario' : `Editando: ${formData.fullName}`}
                                 </h2>
                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                                    {editingId === 'NEW' ? 'Defina credenciales y permisos' : `ID: ${formData.id}`}
+                                    {editingId === 'NEW' ? 'Defina credenciales y permisos' : `ID: ${formData.correlativeId ? `#${formData.correlativeId} - ` : ''}${formData.id}`}
                                 </p>
                             </div>
                             

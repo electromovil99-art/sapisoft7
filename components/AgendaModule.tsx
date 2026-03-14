@@ -5,8 +5,18 @@ import { fetchDataFromSupabase, syncDataToSupabase, deleteDataFromSupabase, subs
 
 export const AgendaModule: React.FC = () => {
     const [tasks, setTasks] = useState<Task[]>([]);
-    const [isAuthorized, setIsAuthorized] = useState(false);
-    const [password, setPassword] = useState('');
+    const [userId, setUserId] = useState(() => {
+        const sessionStr = localStorage.getItem('app_session');
+        if (sessionStr) {
+            try {
+                const session = JSON.parse(sessionStr);
+                return session.user?.id || '';
+            } catch (e) {
+                return '';
+            }
+        }
+        return '';
+    });
     const [filterStatus, setFilterStatus] = useState<'TODAS' | 'PENDIENTE' | 'COMPLETADA'>('TODAS');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -14,11 +24,13 @@ export const AgendaModule: React.FC = () => {
     const [newTask, setNewTask] = useState<Partial<Task>>({ title: '', notes: '', due_date: new Date().toISOString().split('T')[0], priority: 'MEDIA' });
 
     useEffect(() => {
+        if (!userId) return;
         const loadTasks = async () => {
             try {
                 const data = await fetchDataFromSupabase('tasks');
                 console.log("Datos recibidos de Supabase:", data);
-                setTasks(data || []);
+                // Filter tasks by user_id
+                setTasks((data || []).filter((t: Task) => t.user_id === userId));
             } catch (error) {
                 console.error("Error loading tasks:", error);
             }
@@ -32,25 +44,15 @@ export const AgendaModule: React.FC = () => {
         return () => {
             subscription.unsubscribe();
         };
-    }, []);
+    }, [userId]);
 
-    if (!isAuthorized) {
-        // ... (keep existing auth UI)
+    if (!userId) {
         return (
             <div className="flex flex-col items-center justify-center h-full bg-slate-50 dark:bg-slate-900 p-6">
                 <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 w-full max-w-sm text-center">
                     <Lock className="mx-auto text-primary-600 mb-4" size={48} />
                     <h2 className="text-xl font-black text-slate-800 dark:text-white mb-2 uppercase tracking-widest">Acceso Restringido</h2>
-                    <p className="text-slate-500 text-sm mb-6">Ingrese la clave para acceder a la agenda.</p>
-                    <input 
-                        type="password" 
-                        className="w-full p-3 bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-center text-lg font-mono tracking-widest mb-4"
-                        placeholder="••••••"
-                        value={password}
-                        onChange={e => setPassword(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && (password === '121190' ? setIsAuthorized(true) : alert('Clave incorrecta'))}
-                    />
-                    <button onClick={() => password === '121190' ? setIsAuthorized(true) : alert('Clave incorrecta')} className="w-full py-3 bg-primary-600 text-white font-black rounded-xl hover:bg-primary-700 transition-all">Acceder</button>
+                    <p className="text-slate-500 text-sm mb-6">Inicie sesión en la aplicación principal para acceder a sus tareas.</p>
                 </div>
             </div>
         );
@@ -65,13 +67,21 @@ export const AgendaModule: React.FC = () => {
     const handleSaveTask = async () => {
         if (!newTask.title || !newTask.due_date) return alert("Complete título y fecha");
         
+        let nextCorrelative = editingTask?.correlativeId;
+        if (!editingTask) {
+            const maxCorrelative = tasks.reduce((max, t) => Math.max(max, t.correlativeId || 0), 0);
+            nextCorrelative = maxCorrelative + 1;
+        }
+
         const taskToSave = {
             title: newTask.title,
             notes: newTask.notes,
             due_date: newTask.due_date,
             priority: newTask.priority,
             status: editingTask ? editingTask.status : 'PENDIENTE',
-            created_at: editingTask ? editingTask.created_at : new Date().toISOString()
+            created_at: editingTask ? editingTask.created_at : new Date().toISOString(),
+            user_id: userId,
+            correlativeId: nextCorrelative
         } as any;
         if (editingTask) {
             taskToSave.id = editingTask.id;
@@ -82,7 +92,7 @@ export const AgendaModule: React.FC = () => {
             
             // Recargar tareas para asegurar que la UI se actualice
             const data = await fetchDataFromSupabase('tasks');
-            setTasks(data || []);
+            setTasks((data || []).filter((t: Task) => t.user_id === userId));
 
             setNewTask({ title: '', notes: '', due_date: new Date().toISOString().split('T')[0], priority: 'MEDIA' });
             setEditingTask(null);
@@ -99,7 +109,7 @@ export const AgendaModule: React.FC = () => {
             
             // Recargar tareas para asegurar que la UI se actualice
             const data = await fetchDataFromSupabase('tasks');
-            setTasks(data || []);
+            setTasks((data || []).filter((t: Task) => t.user_id === userId));
         } catch (error) {
             console.error("Error deleting task:", error);
             alert("Error al eliminar la tarea");
@@ -128,7 +138,6 @@ export const AgendaModule: React.FC = () => {
                         <option value="PENDIENTE">Pendientes</option>
                         <option value="COMPLETADA">Completadas</option>
                     </select>
-                    <button onClick={() => setIsAuthorized(false)} className="text-slate-400 hover:text-slate-600"><Unlock size={20}/></button>
                 </div>
             </div>
 
@@ -137,7 +146,9 @@ export const AgendaModule: React.FC = () => {
                 {filteredTasks.map(task => (
                     <div key={task.id} className={`bg-white dark:bg-slate-800 p-2 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 flex flex-row items-center gap-2 ${priorityColors[task.priority as keyof typeof priorityColors] || ''}`}>
                         <div className="flex-grow min-w-0">
-                            <h4 className={`font-bold text-sm truncate ${task.status === 'COMPLETADA' ? 'line-through text-slate-400' : 'text-slate-800'}`}>{task.title}</h4>
+                            <h4 className={`font-bold text-sm truncate ${task.status === 'COMPLETADA' ? 'line-through text-slate-400' : 'text-slate-800'}`}>
+                                {task.correlativeId ? `#${task.correlativeId} ` : ''}{task.title}
+                            </h4>
                             <p className="text-slate-500 text-[10px] truncate">{task.notes} • {task.due_date}</p>
                         </div>
                         <div className="flex items-center gap-1 flex-shrink-0">

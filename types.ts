@@ -60,12 +60,16 @@ export type PaymentMethodType = 'Efectivo' | 'Yape' | 'Plin' | 'Yape/Plin' | 'Ta
 
 export interface Task {
     id: string;
+    correlativeId?: number;
+    globalId?: string;
+    updatedBy?: string;
     title: string;
     notes: string;
     due_date: string;
     status: 'PENDIENTE' | 'EN_PROCESO' | 'COMPLETADA';
     created_at: string;
     priority: 'BAJA' | 'MEDIA' | 'ALTA';
+    user_id: string;
 }
 
 // ... existing types ...
@@ -73,6 +77,8 @@ export interface Task {
 // AI Assistant Types
 export interface AiSource {
     id: string;
+    globalId?: string;
+    updatedBy?: string;
     name: string;
     type: 'FILE' | 'TEXT' | 'URL';
     content: string; // The actual text content to train on
@@ -95,6 +101,8 @@ export interface AiConfig {
 
 export interface AiTrainingLog {
     id: string;
+    globalId?: string;
+    updatedBy?: string;
     date: string;
     time: string;
     user: string;
@@ -113,6 +121,8 @@ export type PlanType = 'BASICO' | 'INTERMEDIO' | 'FULL';
 // ... existing interfaces ...
 export interface Supplier {
     id: string;
+    globalId?: string;
+    updatedBy?: string;
     name: string;
     ruc: string;
     phone?: string;
@@ -124,6 +134,8 @@ export interface Supplier {
 // ... rest of file (Branch, Product, Client, etc.) ...
 export interface Branch {
     id: string;
+    globalId?: string;
+    updatedBy?: string;
     name: string;
     address?: string;
     phone?: string;
@@ -137,6 +149,8 @@ export interface PriceTier {
 
 export interface Product {
     id: string;
+    globalId?: string;
+    updatedBy?: string;
     code: string;
     name: string;
     category: string;
@@ -154,6 +168,8 @@ export interface Product {
 
 export interface Client {
     id: string;
+    globalId?: string;
+    updatedBy?: string;
     name: string;
     dni: string;
     phone?: string;
@@ -173,11 +189,15 @@ export interface Client {
 
 export interface Category {
     id: string;
+    globalId?: string;
+    updatedBy?: string;
     name: string;
 }
 
 export interface Brand {
     id: string;
+    globalId?: string;
+    updatedBy?: string;
     name: string;
 }
 
@@ -198,6 +218,7 @@ export interface PaymentBreakdown {
 export interface SaleRecord {
     id: string; // Internal ID (UUID or legacy)
     globalId?: string; // Global Unique Transaction ID (UUID)
+    updatedBy?: string;
     correlativeId?: string; // Human readable ID (e.g. B001-000023)
     tenantId?: string; // For SaaS Traceability
     branchId: string;
@@ -220,6 +241,7 @@ export interface SaleRecord {
 export interface PurchaseRecord {
     id: string;
     globalId?: string;
+    updatedBy?: string;
     correlativeId?: string;
     tenantId?: string;
     branchId: string;
@@ -239,6 +261,7 @@ export interface PurchaseRecord {
 export interface StockMovement {
     id: string;
     globalId?: string;
+    updatedBy?: string;
     tenantId?: string;
     branchId: string;
     date: string;
@@ -256,6 +279,7 @@ export interface StockMovement {
 export interface CashMovement {
     id: string;
     globalId?: string;
+    updatedBy?: string;
     tenantId?: string;
     branchId?: string;
     date: string;
@@ -285,6 +309,7 @@ export interface ServiceProductItem {
 export interface ServiceOrder {
     id: string;
     globalId?: string;
+    updatedBy?: string;
     correlativeId?: string;
     tenantId?: string;
     branchId?: string;
@@ -306,6 +331,9 @@ export interface ServiceOrder {
 
 export interface SystemUser {
     id: string;
+    correlativeId?: number; // Human readable sequential ID
+    globalId?: string;
+    updatedBy?: string;
     username: string;
     password?: string;
     fullName: string;
@@ -339,6 +367,8 @@ export interface Tenant {
 
 export interface BankAccount {
     id: string;
+    globalId?: string;
+    updatedBy?: string;
     bankName: string;
     accountNumber: string;
     currency: 'PEN' | 'USD';
@@ -357,6 +387,7 @@ export interface GeoLocation {
 export interface Quotation {
     id: string;
     globalId?: string;
+    updatedBy?: string;
     correlativeId?: string;
     tenantId?: string;
     branchId?: string;
@@ -370,6 +401,7 @@ export interface Quotation {
 export interface Presale {
     id: string;
     globalId?: string;
+    updatedBy?: string;
     correlativeId?: string;
     tenantId?: string;
     branchId?: string;
@@ -384,6 +416,8 @@ export interface Presale {
 
 export interface WarehouseTransfer {
     id: string;
+    globalId?: string;
+    updatedBy?: string;
     date: string;
     time: string;
     fromBranchId: string;
@@ -400,6 +434,8 @@ export interface WarehouseTransfer {
 
 export interface CashTransferRequest {
     id: string;
+    globalId?: string;
+    updatedBy?: string;
     date: string;
     time: string;
     fromBranchId: string;
@@ -415,6 +451,8 @@ export interface CashTransferRequest {
 
 export interface CashBoxSession {
     id: string;
+    globalId?: string;
+    updatedBy?: string;
     branchId: string;
     openingDate: string;
     closingDate: string;
@@ -454,6 +492,8 @@ export interface InventoryCountItem {
 
 export interface InventoryHistorySession {
     id: string;
+    globalId?: string;
+    updatedBy?: string;
     date: string;
     time: string;
     user: string;
@@ -462,6 +502,9 @@ export interface InventoryHistorySession {
 }
 
 export interface CrmContact {
+    id?: string;
+    globalId?: string;
+    updatedBy?: string;
     name: string;
     phone: string;
     stage: string;
@@ -485,6 +528,8 @@ export interface MasterAccount {
 
 export interface MasterMovement {
     id: string;
+    globalId?: string;
+    updatedBy?: string;
     date: string;
     time: string;
     type: 'Ingreso' | 'Egreso';
@@ -498,6 +543,8 @@ export interface MasterMovement {
 
 export interface TenantInvoice {
     id: string;
+    globalId?: string;
+    updatedBy?: string;
     tenantId: string;
     tenantName: string;
     date: string;
@@ -511,12 +558,16 @@ export interface TenantInvoice {
 
 export interface BroadcastGroup {
     id: string;
+    globalId?: string;
+    updatedBy?: string;
     name: string;
     contacts: string[];
 }
 
 export interface BroadcastJob {
     id: string;
+    globalId?: string;
+    updatedBy?: string;
     scheduledDate: string;
     scheduledTime: string;
     recipients: string[];
