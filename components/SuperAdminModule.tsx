@@ -34,6 +34,7 @@ interface SuperAdminModuleProps {
     services?: ServiceOrder[];
     quotations?: Quotation[];
     presales?: Presale[];
+    onRecorrelateHistory: () => Promise<void>;
 }
 
 type MainTab = 'BUSINESSES' | 'COLLECTIONS' | 'HISTORY' | 'ANALYTICS' | 'BROADCAST' | 'VIDEOS' | 'TRACEABILITY';
@@ -76,7 +77,8 @@ export const SuperAdminModule: React.FC<SuperAdminModuleProps> = ({
     cashMovements = [],
     services = [],
     quotations = [],
-    presales = []
+    presales = [],
+    onRecorrelateHistory
 }) => {
     const [activeMainTab, setActiveMainTab] = useState<MainTab>('BUSINESSES');
     const [searchTerm, setSearchTerm] = useState('');
@@ -348,6 +350,9 @@ export const SuperAdminModule: React.FC<SuperAdminModuleProps> = ({
                     </button>
                     <button onClick={() => setActiveMainTab('TRACEABILITY')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-2 whitespace-nowrap ${activeMainTab === 'TRACEABILITY' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}>
                         <ActivityIcon size={14}/> Trazabilidad
+                    </button>
+                    <button onClick={onRecorrelateHistory} className="px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-2 whitespace-nowrap bg-red-600 text-white hover:bg-red-700">
+                        <RefreshCcw size={14}/> Correlacionar Historial
                     </button>
                 </div>
             </div>

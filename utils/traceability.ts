@@ -14,9 +14,9 @@ export const generateUUID = (): string => {
     });
 };
 
-// Generate a document ID (e.g., VTA-000001)
+// Generate a document ID (e.g., 1)
 export const formatDocumentId = (prefix: string, sequence: number, length: number = 6): string => {
-    return `${prefix}-${sequence.toString().padStart(length, '0')}`;
+    return `${sequence.toString()}`;
 };
 
 // Global SaaS Transaction Counter (Simulated Database Sequence)

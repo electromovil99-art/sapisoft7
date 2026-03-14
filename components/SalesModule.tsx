@@ -463,7 +463,7 @@ export const SalesModule: React.FC<SalesModuleProps> = ({
       const result = await onProcessSale([...cart], total, fullDocType, client?.name || 'CLIENTE VARIOS', b, '', paymentsForRecord, currency, parseFloat(exchangeRate));
       
       if (finalExcess > 0 && sendToWallet && client && client.name !== 'CLIENTE VARIOS' && onUpdateClientBalance) {
-          onUpdateClientBalance(client.id, finalExcess, `VUELTO TICKET #${result?.correlativeId || ticketId}`, depositMethod, depositAccount);
+          onUpdateClientBalance(client.id, finalExcess, `VUELTO TICKET ${result?.correlativeId || ticketId}`, depositMethod, depositAccount);
       }
 
       setTicketData({ 

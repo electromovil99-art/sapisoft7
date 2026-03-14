@@ -70,6 +70,7 @@ import {
 } from './utils/traceability';
 
 import { getNextModuleId, getNextGlobalSupportId, getNextGlobalTransactionId } from './services/counterService';
+import { recorrelateHistory } from './services/historyService';
 
 import { syncDataToSupabase, deleteDataFromSupabase, fetchDataFromSupabase, subscribeToSupabaseChanges } from './services/supabaseService';
 
@@ -620,7 +621,7 @@ const App = () => {
               type: 'SALIDA',
               quantity: item.quantity,
               currentStock: currentStock, // Approximation for log
-              reference: `${docType} #${correlativeId}`,
+              reference: `${correlativeId}`,
               user: session?.user.fullName || 'Admin'
           };
       });
@@ -642,7 +643,7 @@ const App = () => {
                   time: sale.time,
                   type: 'Ingreso',
                   paymentMethod: payment.method,
-                  concept: `PAGO VENTA ${docType} #${correlativeId}`,
+                  concept: `PAGO VENTA ${correlativeId}`,
                   amount: payment.amount,
                   user: session?.user.fullName || 'Admin',
                   category: 'VENTA',
@@ -663,7 +664,7 @@ const App = () => {
               time: sale.time,
               type: 'Ingreso',
               paymentMethod: 'Efectivo',
-              concept: `PAGO VENTA ${docType} #${correlativeId}`,
+              concept: `PAGO VENTA ${correlativeId}`,
               amount: paymentBreakdown.cash,
               user: session?.user.fullName || 'Admin',
               category: 'VENTA',
@@ -763,7 +764,7 @@ const App = () => {
               type: 'ENTRADA',
               quantity: item.quantity,
               currentStock: currentStock, // Approximation
-              reference: `COMPRA ${docType} #${correlativeId}`,
+              reference: `COMPRA ${correlativeId}`,
               user: session?.user.fullName || 'Admin',
               unitCost: item.price
           };
@@ -911,10 +912,11 @@ const App = () => {
       setCashMovements(prev => [m, ...prev]);
   };
   
-  const handleAddService = (s: ServiceOrder) => {
+  const handleAddService = async (s: ServiceOrder) => {
+      const globalId = await getNextGlobalTransactionId();
       const enrichedService = {
           ...s,
-          globalId: s.globalId || generateTransactionId(),
+          globalId: s.globalId || globalId,
           tenantId: s.tenantId || session?.businessName || 'SapiSoft Demo',
           branchId: s.branchId || currentBranchId
       };
@@ -1266,19 +1268,21 @@ const App = () => {
       }
   };
 
-  const handleAddMovement = (m: CashMovement) => {
+  const handleAddMovement = async (m: CashMovement) => {
+      const globalId = await getNextGlobalTransactionId();
       const enrichedMovement = {
           ...m,
-          globalId: m.globalId || generateTransactionId(),
+          globalId: m.globalId || globalId,
           tenantId: m.tenantId || session?.businessName || 'SapiSoft Demo'
       };
       setCashMovements(prev => [enrichedMovement, ...prev]);
       syncToSupabase('cash_movements', enrichedMovement);
   };
-  const handleAddQuotation = (q: Quotation) => {
+  const handleAddQuotation = async (q: Quotation) => {
+      const globalId = await getNextGlobalTransactionId();
       const enrichedQuotation = {
           ...q,
-          globalId: q.globalId || generateTransactionId(),
+          globalId: q.globalId || globalId,
           tenantId: q.tenantId || session?.businessName || 'SapiSoft Demo',
           branchId: q.branchId || currentBranchId
       };
@@ -1297,10 +1301,11 @@ const App = () => {
       }
       handleNavigate(ViewState.POS);
   };
-  const handleAddPresale = (p: Presale) => {
+  const handleAddPresale = async (p: Presale) => {
+      const globalId = await getNextGlobalTransactionId();
       const enrichedPresale = {
           ...p,
-          globalId: p.globalId || generateTransactionId(),
+          globalId: p.globalId || globalId,
           tenantId: p.tenantId || session?.businessName || 'SapiSoft Demo',
           branchId: p.branchId || currentBranchId
       };
@@ -1491,7 +1496,7 @@ const App = () => {
       {currentView === ViewState.DATABASE_CONFIG && <DatabaseModule isSyncEnabled={isSyncEnabled} data={{ products, clients, movements: cashMovements, sales, services, suppliers, brands, categories, bankAccounts, cashBoxSessions }} onSyncDownload={handleSyncDownload} />}
       {currentView === ViewState.CONFIG_PRINTER && <PrintConfigModule />}
       {currentView === ViewState.MEDIA_EDITOR && <MediaEditorModule onUpdateHeroImage={() => {}} onUpdateFeatureImage={() => {}} />}
-      {currentView === ViewState.SUPER_ADMIN_DASHBOARD && <SuperAdminModule tenants={tenants} onAddTenant={handleAddTenant} onUpdateTenant={handleUpdateTenant} onDeleteTenant={handleDeleteTenant} onResetTenantData={handleResetTenantData} sales={sales} purchases={purchases} cashMovements={cashMovements} services={services} quotations={quotations} presales={presales} />}
+      {currentView === ViewState.SUPER_ADMIN_DASHBOARD && <SuperAdminModule tenants={tenants} onAddTenant={handleAddTenant} onUpdateTenant={handleUpdateTenant} onDeleteTenant={handleDeleteTenant} onResetTenantData={handleResetTenantData} sales={sales} purchases={purchases} cashMovements={cashMovements} services={services} quotations={quotations} presales={presales} onRecorrelateHistory={recorrelateHistory} />}
       {currentView === ViewState.CASH_BOX_HISTORY && <CashBoxHistoryModule sessions={cashBoxSessions} bankAccounts={bankAccounts} />}
       {currentView === ViewState.BANK_ACCOUNTS && <BankAccountsModule bankAccounts={bankAccounts} onAddBankAccount={handleAddBankAccount} onUpdateBankAccount={handleUpdateBankAccount} onDeleteBankAccount={handleDeleteBankAccount} onUniversalTransfer={handleUniversalTransfer} />}
       {currentView === ViewState.BANK_HISTORY && <BankHistoryModule cashMovements={cashMovements} bankAccounts={bankAccounts} />}

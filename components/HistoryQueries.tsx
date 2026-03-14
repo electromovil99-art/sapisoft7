@@ -370,7 +370,7 @@ export const HistoryQueries: React.FC<HistoryQueriesProps> = ({ salesHistory, pu
                                                     activeTab === 'ingresos' ? (item.concept.match(/#([A-Z0-9-]+)/) ? item.concept.match(/#([A-Z0-9-]+)/)[0] : (item.docType || item.id.substring(0,10))) : (item.docType || item.id.substring(0,10))
                                                 )}
                                             </div>
-                                            <div className="text-[10px] font-mono text-slate-400">ID: #{item.id.substring(0,8)}</div>
+                                            <div className="text-[10px] font-mono text-slate-400">ID: {item.globalId}</div>
                                         </td>
                                         {activeTab === 'kardex' || activeTab === 'notas_credito' || activeTab === 'historial_producto' ? (
                                             <>
@@ -450,7 +450,7 @@ export const HistoryQueries: React.FC<HistoryQueriesProps> = ({ salesHistory, pu
                                         
                                         <div className="flex items-center justify-between">
                                             <div className="text-[10px] font-mono font-bold text-slate-500 truncate max-w-[180px]">
-                                                {activeTab === 'historial_producto' || activeTab === 'kardex' ? item.reference : (item.docType || item.id.substring(0,10))}
+                                                {activeTab === 'historial_producto' || activeTab === 'kardex' ? item.reference : (item.docType || (item.globalId || item.id.substring(0,10)))}
                                             </div>
                                             <div className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">
                                                 {item.user.split(' ')[0]}
@@ -496,7 +496,8 @@ export const HistoryQueries: React.FC<HistoryQueriesProps> = ({ salesHistory, pu
                                             </p>
                                         </div>
                                         <div className="mb-3 space-y-0.5 text-black">
-                                            <div className="flex justify-between"><span>Comprobante:</span> <span className="font-bold">#{linkedRecord.displayId || linkedRecord.id}</span></div>
+                                            <div className="flex justify-between"><span>Comprobante:</span> <span className="font-bold">{linkedRecord.correlativeId || linkedRecord.displayId}</span></div>
+                                            <div className="flex justify-between"><span>ID:</span> <span className="font-bold">{linkedRecord.globalId}</span></div>
                                             <div className="flex justify-between"><span>Fecha:</span> <span className="font-bold">{linkedRecord.date}</span></div>
                                             <div className="flex justify-between"><span>{linkedRecord.type === 'PURCHASE' ? 'Prov:' : 'Cliente:'}</span> <span className="font-bold truncate max-w-[110px]">{linkedRecord.client?.name || linkedRecord.supplier?.name}</span></div>
                                             <div className="flex justify-between"><span>Pago:</span> <span className="font-black uppercase">{linkedRecord.condition || 'CONTADO'}</span></div>
@@ -535,7 +536,8 @@ export const HistoryQueries: React.FC<HistoryQueriesProps> = ({ salesHistory, pu
                                             </div>
                                             <div className="bg-slate-50 border-2 border-slate-200 p-4 rounded-xl text-center min-w-[200px]">
                                                 <p className="bg-blue-600 text-white py-1 px-2 font-black text-[10px] rounded mb-1 uppercase">{linkedRecord.customLabel || linkedRecord.docType?.toUpperCase() || 'DOCUMENTO'}</p>
-                                                <p className="font-mono text-lg font-black">{linkedRecord.displayId || linkedRecord.id}</p>
+                                                <p className="font-mono text-lg font-black">{linkedRecord.correlativeId || linkedRecord.displayId}</p>
+                                                <p className="font-mono text-sm font-black text-slate-500">ID: {linkedRecord.globalId}</p>
                                             </div>
                                         </div>
                                         <div className="grid grid-cols-2 gap-8 mb-8">

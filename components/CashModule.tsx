@@ -881,7 +881,7 @@ export const CashModule: React.FC<CashModuleProps> = ({
                                         <p className="text-[8px] text-black font-bold uppercase">TICKET DE VENTA</p>
                                     </div>
                                     <div className="mb-3 space-y-0.5 text-black">
-                                        <div className="flex justify-between"><span>Venta:</span> <span className="font-bold">#{linkedRecord.correlativeId || linkedRecord.id.substring(0,8)}</span></div>
+                                        <div className="flex justify-between"><span>Venta:</span> <span className="font-bold">{linkedRecord.correlativeId || linkedRecord.id.substring(0,8)}</span></div>
                                         <div className="flex justify-between"><span>Fecha:</span> <span className="font-bold">{linkedRecord.date} {linkedRecord.time}</span></div>
                                         <div className="flex justify-between"><span>Cliente:</span> <span className="font-bold truncate max-w-[150px]">{linkedRecord.clientName}</span></div>
                                         <div className="flex justify-between"><span>Doc:</span> <span className="uppercase font-bold">{linkedRecord.docType}</span></div>
