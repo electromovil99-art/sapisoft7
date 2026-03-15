@@ -16,7 +16,8 @@ export const generateUUID = (): string => {
 
 // Generate a document ID (e.g., 1)
 export const formatDocumentId = (prefix: string, sequence: number, length: number = 6): string => {
-    return `${sequence.toString()}`;
+    const paddedSequence = sequence.toString().padStart(length, '0');
+    return `${prefix}-${paddedSequence}`;
 };
 
 // Global SaaS Transaction Counter (Simulated Database Sequence)

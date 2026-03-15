@@ -594,11 +594,27 @@ const App = () => {
       
       const companyId = session?.user.companyName || 'SapiSoft Demo';
       const branchId = currentBranchId;
-      const moduleType = docType.includes('NOTA DE CREDITO') ? 'NOTA_CREDITO' : 'VENTA';
+      let moduleType = 'VENTA';
+      let prefix = 'T001';
+      const upperDocType = docType.toUpperCase();
+      
+      if (upperDocType.includes('NOTA DE CREDITO')) {
+          moduleType = 'NOTA_CREDITO';
+          prefix = 'NC01';
+      } else if (upperDocType.includes('BOLETA')) {
+          moduleType = 'VENTA_BOLETA';
+          prefix = 'B001';
+      } else if (upperDocType.includes('FACTURA')) {
+          moduleType = 'VENTA_FACTURA';
+          prefix = 'F001';
+      } else {
+          moduleType = 'VENTA'; // Keep 'VENTA' for tickets to continue existing sequence
+          prefix = 'T001';
+      }
       
       // If ticketId is not provided or is just a timestamp, generate a proper correlative
       const nextId = await getNextModuleId(companyId, branchId, moduleType);
-      const correlativeId = ticketId && ticketId.includes('-') ? ticketId : formatDocumentId(docType.substring(0, 3).toUpperCase(), nextId);
+      const correlativeId = ticketId && ticketId.includes('-') ? ticketId : formatDocumentId(prefix, nextId);
 
       const sale: SaleRecord = {
           id: ticketId || generateUUID(),
