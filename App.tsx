@@ -66,7 +66,9 @@ import {
   generateUUID, 
   generateTransactionId, 
   formatDocumentId, 
-  getNextSequence 
+  getNextSequence,
+  formatDate,
+  formatTime
 } from './utils/traceability';
 
 import { getNextModuleId, getNextGlobalSupportId, getNextGlobalTransactionId } from './services/counterService';
@@ -112,6 +114,86 @@ const App = () => {
     };
     loadSales();
 
+    const loadPurchases = async () => {
+      try {
+        const data = await fetchDataFromSupabase('purchases');
+        setPurchases(data || []);
+      } catch (e) {
+        console.error("Error fetching purchases:", e);
+      }
+    };
+    loadPurchases();
+
+    const loadProducts = async () => {
+      try {
+        const data = await fetchDataFromSupabase('products');
+        if (data && data.length > 0) setProducts(data);
+      } catch (e) {
+        console.error("Error fetching products:", e);
+      }
+    };
+    loadProducts();
+
+    const loadClients = async () => {
+      try {
+        const data = await fetchDataFromSupabase('clients');
+        if (data && data.length > 0) setClients(data);
+      } catch (e) {
+        console.error("Error fetching clients:", e);
+      }
+    };
+    loadClients();
+
+    const loadSuppliers = async () => {
+      try {
+        const data = await fetchDataFromSupabase('suppliers');
+        if (data && data.length > 0) setSuppliers(data);
+      } catch (e) {
+        console.error("Error fetching suppliers:", e);
+      }
+    };
+    loadSuppliers();
+
+    const loadServices = async () => {
+      try {
+        const data = await fetchDataFromSupabase('service_orders');
+        setServices(data || []);
+      } catch (e) {
+        console.error("Error fetching services:", e);
+      }
+    };
+    loadServices();
+
+    const loadQuotations = async () => {
+      try {
+        const data = await fetchDataFromSupabase('quotations');
+        setQuotations(data || []);
+      } catch (e) {
+        console.error("Error fetching quotations:", e);
+      }
+    };
+    loadQuotations();
+
+    const loadPresales = async () => {
+      try {
+        const data = await fetchDataFromSupabase('presales');
+        setPresales(data || []);
+      } catch (e) {
+        console.error("Error fetching presales:", e);
+      }
+    };
+    loadPresales();
+
+    const loadBankAccounts = async () => {
+      try {
+        const data = await fetchDataFromSupabase('bank_accounts');
+        if (data && data.length > 0) setBankAccounts(data);
+      } catch (e) {
+        console.error("Error fetching bank accounts:", e);
+      }
+    };
+    loadBankAccounts();
+
     const loadCashBoxSessions = async () => {
       try {
         const data = await fetchDataFromSupabase('cash_box_sessions');
@@ -131,6 +213,86 @@ const App = () => {
       }
     };
     loadCashMovements();
+
+    const loadCategories = async () => {
+      try {
+        const data = await fetchDataFromSupabase('categories');
+        if (data && data.length > 0) setCategories(data);
+      } catch (e) {
+        console.error("Error fetching categories:", e);
+      }
+    };
+    loadCategories();
+
+    const loadBrands = async () => {
+      try {
+        const data = await fetchDataFromSupabase('brands');
+        if (data && data.length > 0) setBrands(data);
+      } catch (e) {
+        console.error("Error fetching brands:", e);
+      }
+    };
+    loadBrands();
+
+    const loadLocations = async () => {
+      try {
+        const data = await fetchDataFromSupabase('locations');
+        if (data && data.length > 0) setLocations(data);
+      } catch (e) {
+        console.error("Error fetching locations:", e);
+      }
+    };
+    loadLocations();
+
+    const loadTenants = async () => {
+      try {
+        const data = await fetchDataFromSupabase('tenants');
+        if (data && data.length > 0) setTenants(data);
+      } catch (e) {
+        console.error("Error fetching tenants:", e);
+      }
+    };
+    loadTenants();
+
+    const loadBranches = async () => {
+      try {
+        const data = await fetchDataFromSupabase('branches');
+        if (data && data.length > 0) setBranches(data);
+      } catch (e) {
+        console.error("Error fetching branches:", e);
+      }
+    };
+    loadBranches();
+
+    const loadWarehouseTransfers = async () => {
+      try {
+        const data = await fetchDataFromSupabase('warehouse_transfers');
+        setWarehouseTransfers(data || []);
+      } catch (e) {
+        console.error("Error fetching warehouse transfers:", e);
+      }
+    };
+    loadWarehouseTransfers();
+
+    const loadCashTransferRequests = async () => {
+      try {
+        const data = await fetchDataFromSupabase('cash_transfer_requests');
+        setCashTransferRequests(data || []);
+      } catch (e) {
+        console.error("Error fetching cash transfer requests:", e);
+      }
+    };
+    loadCashTransferRequests();
+
+    const loadInventoryHistory = async () => {
+      try {
+        const data = await fetchDataFromSupabase('inventory_history');
+        setInventoryHistory(data || []);
+      } catch (e) {
+        console.error("Error fetching inventory history:", e);
+      }
+    };
+    loadInventoryHistory();
 
     const subscriptionUsers = subscribeToSupabaseChanges('system_users', (payload) => {
       if (payload.eventType === 'INSERT') {
@@ -172,11 +334,132 @@ const App = () => {
       }
     });
 
+    const subscriptionCategories = subscribeToSupabaseChanges('categories', (payload) => {
+      if (payload.eventType === 'INSERT') {
+        setCategories(prev => [...prev, payload.new]);
+      } else if (payload.eventType === 'UPDATE') {
+        setCategories(prev => prev.map(c => c.id === payload.new.id ? payload.new : c));
+      } else if (payload.eventType === 'DELETE') {
+        setCategories(prev => prev.filter(c => c.id !== payload.old.id));
+      }
+    });
+
+    const subscriptionBrands = subscribeToSupabaseChanges('brands', (payload) => {
+      if (payload.eventType === 'INSERT') {
+        setBrands(prev => [...prev, payload.new]);
+      } else if (payload.eventType === 'UPDATE') {
+        setBrands(prev => prev.map(b => b.id === payload.new.id ? payload.new : b));
+      } else if (payload.eventType === 'DELETE') {
+        setBrands(prev => prev.filter(b => b.id !== payload.old.id));
+      }
+    });
+
+    const subscriptionLocations = subscribeToSupabaseChanges('locations', (payload) => {
+      if (payload.eventType === 'INSERT') {
+        setLocations(prev => [...prev, payload.new]);
+      } else if (payload.eventType === 'UPDATE') {
+        setLocations(prev => prev.map(l => l.id === payload.new.id ? payload.new : l));
+      } else if (payload.eventType === 'DELETE') {
+        setLocations(prev => prev.filter(l => l.id !== payload.old.id));
+      }
+    });
+
+    const subscriptionTenants = subscribeToSupabaseChanges('tenants', (payload) => {
+      if (payload.eventType === 'INSERT') {
+        setTenants(prev => [...prev, payload.new]);
+      } else if (payload.eventType === 'UPDATE') {
+        setTenants(prev => prev.map(t => t.id === payload.new.id ? payload.new : t));
+      } else if (payload.eventType === 'DELETE') {
+        setTenants(prev => prev.filter(t => t.id !== payload.old.id));
+      }
+    });
+
+    const subscriptionBranches = subscribeToSupabaseChanges('branches', (payload) => {
+      if (payload.eventType === 'INSERT') {
+        setBranches(prev => [...prev, payload.new]);
+      } else if (payload.eventType === 'UPDATE') {
+        setBranches(prev => prev.map(b => b.id === payload.new.id ? payload.new : b));
+      } else if (payload.eventType === 'DELETE') {
+        setBranches(prev => prev.filter(b => b.id !== payload.old.id));
+      }
+    });
+
+    const subscriptionWarehouseTransfers = subscribeToSupabaseChanges('warehouse_transfers', (payload) => {
+      if (payload.eventType === 'INSERT') {
+        setWarehouseTransfers(prev => [payload.new, ...prev]);
+      } else if (payload.eventType === 'UPDATE') {
+        setWarehouseTransfers(prev => prev.map(t => t.id === payload.new.id ? payload.new : t));
+      } else if (payload.eventType === 'DELETE') {
+        setWarehouseTransfers(prev => prev.filter(t => t.id !== payload.old.id));
+      }
+    });
+
+    const subscriptionCashTransferRequests = subscribeToSupabaseChanges('cash_transfer_requests', (payload) => {
+      if (payload.eventType === 'INSERT') {
+        setCashTransferRequests(prev => [payload.new, ...prev]);
+      } else if (payload.eventType === 'UPDATE') {
+        setCashTransferRequests(prev => prev.map(r => r.id === payload.new.id ? payload.new : r));
+      } else if (payload.eventType === 'DELETE') {
+        setCashTransferRequests(prev => prev.filter(r => r.id !== payload.old.id));
+      }
+    });
+
+    const subscriptionInventoryHistory = subscribeToSupabaseChanges('inventory_history', (payload) => {
+      if (payload.eventType === 'INSERT') {
+        setInventoryHistory(prev => [payload.new, ...prev]);
+      } else if (payload.eventType === 'UPDATE') {
+        setInventoryHistory(prev => prev.map(h => h.id === payload.new.id ? payload.new : h));
+      } else if (payload.eventType === 'DELETE') {
+        setInventoryHistory(prev => prev.filter(h => h.id !== payload.old.id));
+      }
+    });
+
+    const subscriptionServices = subscribeToSupabaseChanges('service_orders', (payload) => {
+      if (payload.eventType === 'INSERT') {
+        setServices(prev => [payload.new, ...prev]);
+      } else if (payload.eventType === 'UPDATE') {
+        setServices(prev => prev.map(s => s.id === payload.new.id ? payload.new : s));
+      } else if (payload.eventType === 'DELETE') {
+        setServices(prev => prev.filter(s => s.id !== payload.old.id));
+      }
+    });
+
+    const subscriptionProducts = subscribeToSupabaseChanges('products', (payload) => {
+      if (payload.eventType === 'INSERT') {
+        setProducts(prev => [payload.new, ...prev]);
+      } else if (payload.eventType === 'UPDATE') {
+        setProducts(prev => prev.map(p => p.id === payload.new.id ? payload.new : p));
+      } else if (payload.eventType === 'DELETE') {
+        setProducts(prev => prev.filter(p => p.id !== payload.old.id));
+      }
+    });
+
+    const subscriptionPurchases = subscribeToSupabaseChanges('purchases', (payload) => {
+      if (payload.eventType === 'INSERT') {
+        setPurchases(prev => [payload.new, ...prev]);
+      } else if (payload.eventType === 'UPDATE') {
+        setPurchases(prev => prev.map(p => p.id === payload.new.id ? payload.new : p));
+      } else if (payload.eventType === 'DELETE') {
+        setPurchases(prev => prev.filter(p => p.id !== payload.old.id));
+      }
+    });
+
     return () => {
       subscription.unsubscribe();
       subscriptionSessions.unsubscribe();
       subscriptionMovements.unsubscribe();
       subscriptionUsers.unsubscribe();
+      subscriptionServices.unsubscribe();
+      subscriptionProducts.unsubscribe();
+      subscriptionPurchases.unsubscribe();
+      subscriptionCategories.unsubscribe();
+      subscriptionBrands.unsubscribe();
+      subscriptionLocations.unsubscribe();
+      subscriptionTenants.unsubscribe();
+      subscriptionBranches.unsubscribe();
+      subscriptionWarehouseTransfers.unsubscribe();
+      subscriptionCashTransferRequests.unsubscribe();
+      subscriptionInventoryHistory.unsubscribe();
     };
   }, []);
 
@@ -313,15 +596,13 @@ const App = () => {
   const [inventoryHistory, setInventoryHistory] = useState<InventoryHistorySession[]>([]);
 
   useEffect(() => {
-    if (cashBoxSessions.length > 0) {
-      const activeSession = cashBoxSessions.find(s => s.status === 'OPEN' && s.branchId === currentBranchId);
-      if (activeSession) {
-        setCurrentCashSession(activeSession);
-      } else {
-        setCurrentCashSession(undefined);
-      }
+    const activeSession = cashBoxSessions.find(s => s.status === 'OPEN' && s.branchId === currentBranchId);
+    if (activeSession) {
+      setCurrentCashSession(activeSession);
+    } else {
+      setCurrentCashSession(undefined);
     }
-  }, [cashBoxSessions]);
+  }, [cashBoxSessions, currentBranchId]);
 
   // --- HISTORY HANDLING ---
   useEffect(() => {
@@ -605,6 +886,71 @@ const App = () => {
     alert(`Se actualizaron ${salesToFix.length} ventas.`);
   };
 
+  const handleFixCorrelatives = async () => {
+      // Fix Sales
+      const updatedSales = sales.map(s => {
+          if (s.correlativeId.includes('TEST')) {
+              const parts = s.correlativeId.split('-');
+              const num = parts[parts.length - 1].replace(/\D/g, '');
+              const newId = `T001-${num.padStart(6, '0')}`;
+              return { ...s, correlativeId: newId };
+          }
+          return s;
+      });
+      const salesChanged = updatedSales.filter((s, i) => s.correlativeId !== sales[i].correlativeId);
+      if (salesChanged.length > 0) {
+          setSales(updatedSales);
+          await syncToSupabase('sales', salesChanged);
+      }
+
+      // Fix Purchases
+      const updatedPurchases = purchases.map(p => {
+          if (p.correlativeId.includes('TEST')) {
+              const parts = p.correlativeId.split('-');
+              const num = parts[parts.length - 1].replace(/\D/g, '');
+              const newId = `PUR-${num.padStart(6, '0')}`;
+              return { ...p, correlativeId: newId };
+          }
+          return p;
+      });
+      const purchasesChanged = updatedPurchases.filter((p, i) => p.correlativeId !== purchases[i].correlativeId);
+      if (purchasesChanged.length > 0) {
+          setPurchases(updatedPurchases);
+          await syncToSupabase('purchases', purchasesChanged);
+      }
+
+      // Fix Services
+      const updatedServices = services.map(s => {
+          if (s.id.includes('TEST')) {
+              const num = s.id.replace(/\D/g, '');
+              const newId = `SER-${num.padStart(6, '0')}`;
+              return { ...s, id: newId };
+          }
+          return s;
+      });
+      const servicesChanged = updatedServices.filter((s, i) => s.id !== services[i].id);
+      if (servicesChanged.length > 0) {
+          setServices(updatedServices);
+          await syncToSupabase('service_orders', servicesChanged);
+      }
+
+      // Fix Cash Movements
+      const updatedMovements = cashMovements.map(m => {
+          if (m.concept.includes('TEST')) {
+              const newConcept = m.concept.replace('TEST-', '').replace('T001-TEST-', 'T001-');
+              return { ...m, concept: newConcept };
+          }
+          return m;
+      });
+      const movementsChanged = updatedMovements.filter((m, i) => m.concept !== cashMovements[i].concept);
+      if (movementsChanged.length > 0) {
+          setCashMovements(updatedMovements);
+          await syncToSupabase('cash_movements', movementsChanged);
+      }
+
+      alert("Correlativos normalizados en todos los módulos.");
+  };
+
   const handleProcessSale = async (cart: CartItem[], total: number, docType: string, clientName: string, paymentBreakdown: PaymentBreakdown, ticketId: string, detailedPayments: any[], currency: string, exchangeRate: number, clientId?: number) => {
       // Generate Traceability IDs
       const globalId = await getNextGlobalTransactionId();
@@ -639,8 +985,8 @@ const App = () => {
           correlativeId: correlativeId,
           tenantId: session?.businessName || 'SapiSoft Demo',
           branchId: currentBranchId,
-          date: new Date().toLocaleDateString('es-PE'),
-          time: new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false }),
+          date: formatDate(),
+          time: formatTime(),
           clientName,
           clientId,
           docType,
@@ -781,8 +1127,8 @@ const App = () => {
           correlativeId: correlativeId,
           tenantId: session?.businessName || 'SapiSoft Demo',
           branchId: currentBranchId,
-          date: new Date().toLocaleDateString('es-PE'),
-          time: new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false }),
+          date: formatDate(),
+          time: formatTime(),
           supplierName,
           docType,
           total,
@@ -1281,8 +1627,8 @@ const App = () => {
   };
   const handleOpenCashBox = (openingCash: number, notes: string, confirmedBankBalances: Record<string, string>) => {
       const now = new Date();
-      const dateStr = now.toLocaleDateString('es-PE');
-      const timeStr = now.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false });
+      const dateStr = formatDate(now);
+      const timeStr = formatTime(now);
       
       const newSession: CashBoxSession = {
           id: 'CS-' + Date.now(),
@@ -1304,15 +1650,34 @@ const App = () => {
           confirmedDigitalAtClose: {},
           closingNotes: ''
       };
+
+      // Add a movement for the opening balance so it appears in the list
+      const openingMovement: CashMovement = {
+          id: 'M-OPEN-' + Date.now(),
+          branchId: currentBranchId,
+          date: dateStr,
+          time: timeStr,
+          type: 'Ingreso',
+          paymentMethod: 'Efectivo',
+          concept: 'SALDO INICIAL DE CAJA',
+          amount: openingCash,
+          user: session?.user.fullName || 'Admin',
+          category: 'AJUSTE APERTURA',
+          financialType: 'Variable'
+      };
+
       setCurrentCashSession(newSession);
+      setCashMovements(prev => [openingMovement, ...prev]);
+      
       syncToSupabase('cash_box_sessions', newSession);
+      syncToSupabase('cash_movements', openingMovement);
   };
 
   const handleCloseCashBox = (countedCash: number, systemCash: number, systemDigital: number, notes: string, confirmedBankBalances: Record<string, string>) => {
       if (currentCashSession) {
           const now = new Date();
-          const dateStr = now.toLocaleDateString('es-PE');
-          const timeStr = now.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false });
+          const dateStr = formatDate(now);
+          const timeStr = formatTime(now);
           
           const closedSession = {
               ...currentCashSession,
@@ -1565,7 +1930,7 @@ const App = () => {
       {currentView === ViewState.BANK_ACCOUNTS && <BankAccountsModule bankAccounts={bankAccounts} onAddBankAccount={handleAddBankAccount} onUpdateBankAccount={handleUpdateBankAccount} onDeleteBankAccount={handleDeleteBankAccount} onUniversalTransfer={handleUniversalTransfer} />}
       {currentView === ViewState.BANK_HISTORY && <BankHistoryModule cashMovements={cashMovements} bankAccounts={bankAccounts} />}
       {currentView === ViewState.COMPANY_PROFILE && <CompanyProfileModule companyName={companyName} onUpdateCompanyName={setCompanyName} companyLogo={companyLogo} onUpdateLogo={setCompanyLogo} baseCurrency={baseCurrency} onUpdateBaseCurrency={setBaseCurrency} />}
-      {currentView === ViewState.SYSTEM_DIAGNOSTICS && <SystemDiagnosticsModule products={products} cashMovements={cashMovements} stockMovements={stockMovements} onAddCashMovement={handleAddMovement} onAddProduct={handleAddProduct} onProcessSale={handleProcessSale} onProcessPurchase={handleProcessPurchase} onProcessCreditNote={handleProcessCreditNote} onAddService={handleAddService} currentBranchId={currentBranchId} onFixSalesData={handleFixSalesData} />}
+      {currentView === ViewState.SYSTEM_DIAGNOSTICS && <SystemDiagnosticsModule products={products} cashMovements={cashMovements} stockMovements={stockMovements} onAddCashMovement={handleAddMovement} onAddProduct={handleAddProduct} onProcessSale={handleProcessSale} onProcessPurchase={handleProcessPurchase} onProcessCreditNote={handleProcessCreditNote} onAddService={handleAddService} currentBranchId={currentBranchId} onFixSalesData={handleFixSalesData} onFixCorrelatives={handleFixCorrelatives} />}
       {currentView === ViewState.GATEWAY_CONFIG && <GatewayConfigModule />}
       {currentView === ViewState.BRANCH_MANAGEMENT && <BranchManagementModule branches={branches} onAddBranch={handleAddBranch} onUpdateBranch={handleUpdateBranch} onDeleteBranch={handleDeleteBranch} onCloneBranch={handleCloneBranch} onSwitchBranch={handleSwitchBranch} currentBranchId={currentBranchId} />}
       {currentView === ViewState.WAREHOUSE_TRANSFER && <WarehouseTransferModule branches={branches} currentBranchId={currentBranchId} products={products} onProcessTransfer={(t) => {

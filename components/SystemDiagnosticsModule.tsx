@@ -13,12 +13,13 @@ interface SystemDiagnosticsProps {
     stockMovements: StockMovement[];
     onAddCashMovement: (movement: CashMovement) => void;
     onAddProduct: (p: Product) => void;
-    onProcessSale: (cart: CartItem[], total: number, docType: string, clientName: string, paymentBreakdown: PaymentBreakdown, ticketId: string, detailedPayments: any[], currency: string, exchangeRate: number) => void;
+    onProcessSale: (cart: CartItem[], total: number, docType: string, clientName: string, paymentBreakdown: PaymentBreakdown, ticketId: string, detailedPayments: any[], currency: string, exchangeRate: number, clientId?: number) => void;
     onProcessPurchase: (cart: CartItem[], total: number, docType: string, supplierName: string, paymentCondition: 'Contado' | 'Credito', creditDays: number, detailedPayments?: any[], currency?: string, exchangeRate?: number) => void;
     onProcessCreditNote: (originalSaleId: string, itemsToReturn: { itemId: string, quantity: number }[], totalRefund: number, breakdown: PaymentBreakdown, detailedRefunds?: any[]) => void;
     onAddService: (s: ServiceOrder) => void;
     currentBranchId: string;
     onFixSalesData?: () => void;
+    onFixCorrelatives?: () => void;
 }
 
 const SystemDiagnosticsModule: React.FC<SystemDiagnosticsProps> = ({ 
@@ -32,7 +33,8 @@ const SystemDiagnosticsModule: React.FC<SystemDiagnosticsProps> = ({
     onProcessCreditNote,
     onAddService,
     currentBranchId,
-    onFixSalesData
+    onFixSalesData,
+    onFixCorrelatives
 }) => {
     const [testLogs, setTestLogs] = useState<{ id: number, name: string, status: 'PENDING' | 'PASS' | 'FAIL', details: string, time: string }[]>([]);
     const [isTesting, setIsTesting] = useState(false);
@@ -77,53 +79,57 @@ const SystemDiagnosticsModule: React.FC<SystemDiagnosticsProps> = ({
             await sleep(3000);
 
             // 2. VENTA 1
-            const saleId1 = `T-SALE-A-${randomId}`;
+            const saleId1 = `T001-0000${randomId.padStart(2, '0')}1`;
             const saleCart1: CartItem[] = [{ ...newProd, quantity: 3, discount: 0, total: 300.00 }];
-            onProcessSale(saleCart1, 300.00, 'TICKET DE VENTA', 'CLIENTE ALPHA', { cash: 300, yape: 0, card: 0, bank: 0, wallet: 0 }, saleId1, [{ method: 'Efectivo', amount: 300 }], 'PEN', 1);
-            addLog(testName, 'PASS', `2. [${new Date().toLocaleTimeString()}] Venta Alpha: 3 unidades vendidas a S/ 100.00. Stock residual: 7.`);
+            onProcessSale(saleCart1, 300.00, 'TICKET DE VENTA', 'CLIENTE ALPHA', { cash: 300, yape: 0, card: 0, bank: 0, wallet: 0 }, saleId1, [{ method: 'Efectivo', amount: 300 }], 'PEN', 1, 1);
+            addLog(testName, 'PASS', `2. [${new Date().toLocaleTimeString()}] Venta Alpha: 3 unidades vendidas. Correlativo: ${saleId1}`);
 
             await sleep(3000);
 
             // 3. COMPRA 1 (INFLACIÓN)
             const buyCost1 = 85.00;
             const buyQty1 = 20;
+            const purchaseId1 = `PUR-0000${randomId.padStart(2, '0')}1`;
             const purchaseCart1: CartItem[] = [{ ...newProd, quantity: buyQty1, price: buyCost1, discount: 0, total: buyCost1 * buyQty1 }];
             onProcessPurchase(purchaseCart1, buyCost1 * buyQty1, 'FACTURA DE COMPRA', 'PROVEEDOR CARO', 'Contado', 0, [{ method: 'Efectivo', amount: buyCost1 * buyQty1 }], 'PEN', 1);
-            addLog(testName, 'PASS', `3. [${new Date().toLocaleTimeString()}] Compra 1: 20 unidades compradas a S/ ${buyCost1}. WAC debe subir.`);
+            addLog(testName, 'PASS', `3. [${new Date().toLocaleTimeString()}] Compra 1: 20 unidades compradas. Correlativo: ${purchaseId1}`);
 
             await sleep(3000);
 
             // 4. VENTA 2
-            const saleId2 = `T-SALE-B-${randomId}`;
+            const saleId2 = `T001-0000${randomId.padStart(2, '0')}2`;
             const saleCart2: CartItem[] = [{ ...newProd, quantity: 5, discount: 0, total: 600.00, price: 120.00 }];
-            onProcessSale(saleCart2, 600.00, 'TICKET DE VENTA', 'CLIENTE BETA', { cash: 600, yape: 0, card: 0, bank: 0, wallet: 0 }, saleId2, [{ method: 'Efectivo', amount: 600 }], 'PEN', 1);
-            addLog(testName, 'PASS', `4. [${new Date().toLocaleTimeString()}] Venta Beta: 5 unidades a S/ 120.00. Stock disminuye.`);
+            onProcessSale(saleCart2, 600.00, 'TICKET DE VENTA', 'CLIENTE BETA', { cash: 600, yape: 0, card: 0, bank: 0, wallet: 0 }, saleId2, [{ method: 'Efectivo', amount: 600 }], 'PEN', 1, 1);
+            addLog(testName, 'PASS', `4. [${new Date().toLocaleTimeString()}] Venta Beta: 5 unidades vendidas. Correlativo: ${saleId2}`);
 
             await sleep(3000);
 
             // 5. COMPRA 2 (OFERTA)
             const buyCost2 = 45.00;
             const buyQty2 = 15;
+            const purchaseId2 = `PUR-0000${randomId.padStart(2, '0')}2`;
             const purchaseCart2: CartItem[] = [{ ...newProd, quantity: buyQty2, price: buyCost2, discount: 0, total: buyCost2 * buyQty2 }];
             onProcessPurchase(purchaseCart2, buyCost2 * buyQty2, 'BOLETA DE COMPRA', 'PROVEEDOR BARATO', 'Contado', 0, [{ method: 'Efectivo', amount: buyCost2 * buyQty2 }], 'PEN', 1);
-            addLog(testName, 'PASS', `5. [${new Date().toLocaleTimeString()}] Compra 2: 15 unidades a S/ ${buyCost2}. WAC debe bajar.`);
+            addLog(testName, 'PASS', `5. [${new Date().toLocaleTimeString()}] Compra 2: 15 unidades compradas. Correlativo: ${purchaseId2}`);
 
             await sleep(3000);
 
             // 6. NOTA DE CRÉDITO (DEVOLUCIÓN DE VENTA 1)
             const returnItems = [{ itemId: newProd.id, quantity: 2 }];
+            const ncId = `NC01-0000${randomId.padStart(2, '0')}1`;
             onProcessCreditNote(saleId1, returnItems, 200.00, { cash: 200, yape: 0, card: 0, bank: 0, wallet: 0 }, [{ method: 'Efectivo', amount: 200 }]);
-            addLog(testName, 'PASS', `6. [${new Date().toLocaleTimeString()}] Nota de Crédito: Reingreso de 2 unidades de Venta Alpha. Egreso de caja registrado.`);
+            addLog(testName, 'PASS', `6. [${new Date().toLocaleTimeString()}] Nota de Crédito: Devolución Venta Alpha. Correlativo: ${ncId}`);
 
             await sleep(3000);
 
             // 7. SERVICIO TÉCNICO
             const service: ServiceOrder = {
-                id: `S-DIAG-${randomId}`,
+                id: `SER-0000${randomId.padStart(2, '0')}1`,
                 branchId: currentBranchId,
                 entryDate: new Date().toLocaleDateString('es-PE'),
                 entryTime: new Date().toLocaleTimeString('es-PE', {hour:'2-digit', minute:'2-digit'}),
                 client: 'CLIENTE TALLER TEST',
+                clientId: 1,
                 deviceModel: 'TERMINAL DE PRUEBA',
                 issue: 'Diagnóstico de flujo de stock',
                 status: 'Reparado',
@@ -134,7 +140,7 @@ const SystemDiagnosticsModule: React.FC<SystemDiagnosticsProps> = ({
                 color: '#8b5cf6'
             };
             onAddService(service);
-            addLog(testName, 'PASS', `7. [${new Date().toLocaleTimeString()}] Taller: Salida de 1 unidad por reparación. Orden #${service.id}`);
+            addLog(testName, 'PASS', `7. [${new Date().toLocaleTimeString()}] Taller: Salida por reparación. Orden #${service.id}`);
 
             addLog(testName, 'PASS', "✅ TEST FINALIZADO CON ÉXITO. Se han generado marcas de tiempo únicas para cada operación.");
 
@@ -205,6 +211,15 @@ const SystemDiagnosticsModule: React.FC<SystemDiagnosticsProps> = ({
                             </div>
                             <h4 className="font-black text-xs uppercase text-slate-800 dark:text-white">Reparar IDs de Ventas</h4>
                             <p className="text-[10px] text-slate-500 font-bold mt-1 uppercase tracking-tight">Actualiza ventas con clientId en null al ID 1 (CLIENTE VARIOS).</p>
+                        </div>
+
+                        <div className="p-5 bg-slate-50 dark:bg-slate-900/50 rounded-3xl border border-slate-100 dark:border-slate-700 group hover:border-amber-500/50 transition-all">
+                            <div className="flex justify-between items-start mb-2">
+                                <div className="p-3 bg-white dark:bg-slate-800 rounded-2xl shadow-sm text-amber-600"><RefreshCw size={20}/></div>
+                                <button onClick={onFixCorrelatives} className="p-2 hover:bg-amber-50 dark:hover:bg-amber-900/30 text-amber-600 rounded-xl transition-all"><Play size={16}/></button>
+                            </div>
+                            <h4 className="font-black text-xs uppercase text-slate-800 dark:text-white">Normalizar Correlativos</h4>
+                            <p className="text-[10px] text-slate-500 font-bold mt-1 uppercase tracking-tight">Elimina prefijos "TEST" y estandariza formatos en Ventas, Compras y Servicios.</p>
                         </div>
 
                         <div className="p-5 bg-slate-50 dark:bg-slate-900/50 rounded-3xl border border-slate-100 dark:border-slate-700 group hover:border-blue-500/50 transition-all opacity-50">

@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Plus, Minus, Wallet, Banknote, QrCode, Landmark, CreditCard, Eye, X, Lock, Unlock, CheckCircle, Printer, RotateCcw, ArrowRightLeft, Calculator, FileText, AlertTriangle, ChevronRight, ArrowRight, Tag, Layers, Hash, Layout, FileText as FileIcon, Clock, ChevronDown, User, Info, Fingerprint, ShoppingCart, ShoppingBag } from 'lucide-react';
 import { CashMovement, PaymentMethodType, BankAccount, SaleRecord, PurchaseRecord, CartItem, CashBoxSession } from '../types';
-import { generateUUID } from '../utils/traceability';
+import { generateUUID, formatDate } from '../utils/traceability';
 import { getNextGlobalTransactionId } from '../services/counterService';
 
 interface CashModuleProps {
@@ -411,12 +411,38 @@ export const CashModule: React.FC<CashModuleProps> = ({
   
   const [printFormat, setPrintFormat] = useState<'80mm' | 'A4'>('80mm');
 
-  const todayStr = new Date().toLocaleDateString('es-PE');
+  const todayStr = formatDate();
 
   const activeMovements = useMemo(() => {
       if (!currentSession) return [];
-      return movements.filter(m => m.date === todayStr);
-  }, [movements, todayStr, currentSession]);
+      
+      const normalizeDate = (d: string) => {
+          if (!d) return '';
+          // Unify separators and take only the date part
+          const clean = d.split(' ')[0].replace(/-/g, '/');
+          const parts = clean.split('/');
+          
+          if (parts.length === 3) {
+              // If YYYY/MM/DD -> convert to DD/MM/YYYY
+              if (parts[0].length === 4) {
+                  return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
+              }
+              // Ensure DD/MM/YYYY has leading zeros
+              return parts.map(p => p.padStart(2, '0')).join('/');
+          }
+          return clean;
+      };
+
+      const normalizedToday = normalizeDate(todayStr);
+      const normalizedSessionDate = normalizeDate(currentSession.openingDate);
+
+      return movements.filter(m => {
+          const normalizedMDate = normalizeDate(m.date);
+          const isCorrectBranch = !m.branchId || !currentBranchId || m.branchId === currentBranchId;
+          const isCorrectDate = normalizedMDate === normalizedToday || normalizedMDate === normalizedSessionDate;
+          return isCorrectBranch && isCorrectDate;
+      });
+  }, [movements, todayStr, currentSession, currentBranchId]);
 
   const displayedMovements = useMemo(() => {
       let filtered = [...activeMovements];
@@ -635,7 +661,7 @@ export const CashModule: React.FC<CashModuleProps> = ({
         <div className="flex-1 flex flex-col bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 overflow-hidden shadow-sm min-h-0">
              <div className="px-4 py-2.5 border-b flex flex-col md:flex-row justify-between items-center bg-slate-50/50 gap-3">
                 <div className="flex items-center gap-3 w-full md:w-auto">
-                    <h3 className="font-black text-xs text-slate-700 uppercase tracking-wider whitespace-nowrap">Flujo de Turno</h3>
+                    <h3 className="font-black text-xs text-slate-700 uppercase tracking-wider whitespace-nowrap">Flujo de Turno ({displayedMovements.length}/{movements.length})</h3>
                     <select value={filter} onChange={e => setFilter(e.target.value as any)} className="flex-1 md:flex-none bg-white border rounded text-[10px] py-1 font-bold uppercase px-2 outline-none">
                         <option value="ALL">Todo</option><option value="CASH">Efectivo</option><option value="DIGITAL">Digital</option>
                     </select>
@@ -694,7 +720,16 @@ export const CashModule: React.FC<CashModuleProps> = ({
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                            {displayedMovements.map(m => (
+                            {displayedMovements.length === 0 ? (
+                                <tr>
+                                    <td colSpan={10} className="px-4 py-10 text-center text-slate-400 font-bold uppercase text-[10px] tracking-widest">
+                                        No hay movimientos registrados para esta sesión
+                                        <div className="mt-2 text-[8px] opacity-50 lowercase">
+                                            debug: raw={movements.length} active={activeMovements.length} branch={currentBranchId} today={todayStr}
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : displayedMovements.map(m => (
                                 <tr key={m.id} className="hover:bg-slate-50 transition-colors">
                                     <td className="px-4 py-3 font-black text-slate-400 tracking-tighter text-xs">{m.sequentialId}</td>
                                     <td className="px-4 py-3 font-mono text-slate-500 text-[10px]">{m.globalId ? m.globalId.substring(0, 8) : '---'}</td>
