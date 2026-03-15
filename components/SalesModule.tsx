@@ -18,7 +18,7 @@ interface SalesModuleProps {
     bankAccounts: BankAccount[]; 
     locations: GeoLocation[];
     onAddClient: (client: Client) => void;
-    onProcessSale: (cart: CartItem[], total: number, docType: string, clientName: string, paymentBreakdown: PaymentBreakdown, ticketId: string, detailedPayments: any[], currency: string, exchangeRate: number) => any;
+    onProcessSale: (cart: CartItem[], total: number, docType: string, clientName: string, paymentBreakdown: PaymentBreakdown, ticketId: string, detailedPayments: any[], currency: string, exchangeRate: number, clientId?: number) => any;
     cart: CartItem[];
     setCart: (cart: CartItem[]) => void;
     client: Client | null;
@@ -35,7 +35,7 @@ interface SalesModuleProps {
     mode?: 'SALE' | 'PRESALE'; 
     onCancel?: () => void;     
     onNavigate?: (view: ViewState) => void; 
-    onUpdateClientBalance?: (clientId: string, amountChange: number, reason: string, paymentMethod?: any, accountId?: string) => void;
+    onUpdateClientBalance?: (clientId: number, amountChange: number, reason: string, paymentMethod?: any, accountId?: string) => void;
     isCashBoxOpen?: boolean;
 }
 
@@ -228,7 +228,38 @@ export const SalesModule: React.FC<SalesModuleProps> = ({
     }, 1000);
   };
 
+  const handleSaveClient = () => {
+      if (!newClientData.name || !newClientData.dni) return alert("Nombre y DNI son obligatorios.");
+      
+      const maxId = clients.reduce((max, c) => Math.max(max, c.id), 0);
+      const nextId = maxId + 1;
+
+      const cl: Client = {
+          id: nextId, 
+          correlativeId: nextId,
+          name: newClientData.name.toUpperCase(), 
+          dni: newClientData.dni, 
+          phone: newClientData.phone, 
+          email: newClientData.email, 
+          address: newClientData.address, 
+          department: newClientData.department, 
+          province: newClientData.province, 
+          district: newClientData.district, 
+          creditLine: 0, 
+          creditUsed: 0, 
+          totalPurchases: 0, 
+          paymentScore: 3, 
+          digitalBalance: 0
+      };
+      onAddClient(cl);
+      setClient(cl);
+      setClientSearchTerm(cl.name);
+      setShowClientModal(false);
+      setNewClientData({ name: '', dni: '', phone: '', address: '', email: '', department: 'LIMA', province: 'LIMA', district: '' });
+  };
+
   const departments = useMemo(() => locations.filter(l => l.type === 'DEP'), [locations]);
+
   const provinces = useMemo(() => {
       const depId = departments.find(d => d.name === newClientData.department)?.id;
       return locations.filter(l => l.type === 'PROV' && l.parentId === depId);
@@ -259,7 +290,7 @@ export const SalesModule: React.FC<SalesModuleProps> = ({
       setClientSearchTerm(val);
       const searchWords = normalize(val).split(" ").filter(w => w !== "");
       const found = clients.find(c => {
-          const target = normalize(`${c.name} ${c.dni}`);
+          const target = normalize(`${c.name} ${c.dni} ${c.id}`);
           return searchWords.length > 0 && searchWords.every(word => target.includes(word));
       });
       if (found) setClient(found);
@@ -375,7 +406,7 @@ export const SalesModule: React.FC<SalesModuleProps> = ({
         setSendToWallet(!!(client && client.name !== 'CLIENTE VARIOS'));
         setShowPaymentModal(true);
     } else {
-        const result = await onProcessSale([...cart], safeTotal, fullDocType, client?.name || 'CLIENTE VARIOS', { cash: 0, yape: 0, card: 0, bank: 0, wallet: 0 }, '', [], currency, parseFloat(exchangeRate || '1'));
+        const result = await onProcessSale([...cart], safeTotal, fullDocType, client?.name || 'CLIENTE VARIOS', { cash: 0, yape: 0, card: 0, bank: 0, wallet: 0 }, '', [], currency, parseFloat(exchangeRate || '1'), client?.id || 1);
         setTicketData({ id: result?.correlativeId || 'CR-' + Date.now(), globalId: result?.globalId, date: new Date().toLocaleDateString('es-PE'), time: new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false }), client: client || { name: 'CLIENTE VARIOS', dni: '00000000' }, docType: fullDocType, items: [...cart], total: safeTotal, subtotal: safeTotal / 1.18, igv: safeTotal - (safeTotal / 1.18), currency, condition: 'CRÉDITO (' + creditDays + ' DÍAS)', payments: [] });
         setCart([]); setClient(null); setClientSearchTerm('CLIENTE VARIOS'); setDocNumber(''); setShowTicket(true);
     }
@@ -383,7 +414,7 @@ export const SalesModule: React.FC<SalesModuleProps> = ({
 
   const handleSaveQuotation = () => {
     if (cart.length === 0) return alert("El carrito está vacío.");
-    const quote: Quotation = { id: 'QUO-' + Date.now(), date: new Date().toLocaleDateString('es-PE'), time: new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false }), clientName: client?.name || 'CLIENTE VARIOS', items: [...cart], total: total };
+    const quote: Quotation = { id: 'QUO-' + Date.now(), date: new Date().toLocaleDateString('es-PE'), time: new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false }), clientName: client?.name || 'CLIENTE VARIOS', clientId: client?.id || 1, items: [...cart], total: total };
     onAddQuotation(quote); setCart([]); setClient(null); setClientSearchTerm('CLIENTE VARIOS'); alert("Cotización guardada exitosamente.");
   };
   
@@ -408,7 +439,7 @@ export const SalesModule: React.FC<SalesModuleProps> = ({
 
   const handleSavePresale = () => {
       if (!presaleDeliveryDate) return alert("Debe establecer una fecha de entrega.");
-      const presale: Presale = { id: 'PRE-' + Date.now(), date: new Date().toLocaleDateString('es-PE'), time: new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false }), deliveryDate: presaleDeliveryDate, clientName: client?.name || 'CLIENTE VARIOS', items: [...cart], total: total, status: 'PENDING' };
+      const presale: Presale = { id: 'PRE-' + Date.now(), date: new Date().toLocaleDateString('es-PE'), time: new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false }), deliveryDate: presaleDeliveryDate, clientName: client?.name || 'CLIENTE VARIOS', clientId: client?.id || 1, items: [...cart], total: total, status: 'PENDING' };
       onAddPresale(presale); setCart([]); setClient(null); setClientSearchTerm('CLIENTE VARIOS'); setShowPresaleModal(false); if(onCancel) onCancel(); alert(`Preventa guardada. Fecha de entrega pactada: ${presaleDeliveryDate}.`);
   };
 
@@ -460,7 +491,7 @@ export const SalesModule: React.FC<SalesModuleProps> = ({
           wallet: paymentsForRecord.filter(p => p.method === 'Saldo Favor').reduce((a, b) => a + b.amount, 0) 
       };
       
-      const result = await onProcessSale([...cart], total, fullDocType, client?.name || 'CLIENTE VARIOS', b, '', paymentsForRecord, currency, parseFloat(exchangeRate));
+      const result = await onProcessSale([...cart], total, fullDocType, client?.name || 'CLIENTE VARIOS', b, '', paymentsForRecord, currency, parseFloat(exchangeRate), client?.id || 1);
       
       if (finalExcess > 0 && sendToWallet && client && client.name !== 'CLIENTE VARIOS' && onUpdateClientBalance) {
           onUpdateClientBalance(client.id, finalExcess, `VUELTO TICKET ${result?.correlativeId || ticketId}`, depositMethod, depositAccount);
@@ -526,8 +557,8 @@ export const SalesModule: React.FC<SalesModuleProps> = ({
             </div>
             <div className="relative group">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 text-primary-500 group-focus-within:text-primary-600 transition-colors" size={14}/>
-                <input list="pos-clients" className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-800 dark:text-white outline-none focus:border-primary-500 text-xs uppercase" value={clientSearchTerm} onChange={handleClientSearchChange} onFocus={() => clientSearchTerm === 'CLIENTE VARIOS' && setClientSearchTerm('')} placeholder="CLIENTE / DNI..." />
-                <datalist id="pos-clients">{clients.map(c => <option key={c.id} value={c.name}>{c.dni}</option>)}</datalist>
+                <input list="pos-clients" className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-800 dark:text-white outline-none focus:border-primary-500 text-xs uppercase" value={clientSearchTerm} onChange={handleClientSearchChange} onFocus={() => clientSearchTerm === 'CLIENTE VARIOS' && setClientSearchTerm('')} placeholder="CLIENTE / ID / DNI..." />
+                <datalist id="pos-clients">{clients.map(c => <option key={c.id} value={c.name}>{`ID: ${c.id} | DNI: ${c.dni}`}</option>)}</datalist>
             </div>
             <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
@@ -1253,6 +1284,71 @@ export const SalesModule: React.FC<SalesModuleProps> = ({
             </div>
         </div>
       )}
+
+      {/* 7. MODAL NUEVO CLIENTE */}
+      {showClientModal && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[2200] flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-2xl w-full max-w-2xl border border-white/20 animate-in zoom-in-95 overflow-hidden flex flex-col">
+                <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 flex justify-between items-center">
+                    <h3 className="font-black text-sm uppercase tracking-widest text-slate-800 dark:text-white flex items-center gap-2">
+                        <UserPlus size={18} className="text-primary-500"/> Nuevo Cliente
+                    </h3>
+                    <button onClick={() => setShowClientModal(false)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"><X size={18}/></button>
+                </div>
+                <div className="p-8 space-y-6 overflow-y-auto max-h-[70vh] custom-scrollbar">
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Nombre Completo / Razón Social</label>
+                        <input type="text" className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold uppercase outline-none focus:border-primary-500 text-sm" value={newClientData.name} onChange={e => setNewClientData({...newClientData, name: e.target.value})} placeholder="EJ. JUAN PÉREZ" autoFocus />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">DNI / RUC</label>
+                            <div className="relative">
+                                <input type="text" className="w-full p-4 pr-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold outline-none focus:border-primary-500 text-sm" value={newClientData.dni} onChange={e => setNewClientData({...newClientData, dni: e.target.value})} placeholder="00000000" />
+                                <button onClick={searchClientByDoc} disabled={isSearchingClient} className="absolute right-2 top-2 bottom-2 px-3 bg-white dark:bg-slate-800 rounded-xl text-primary-600 hover:bg-primary-50 transition-colors shadow-sm disabled:opacity-50">
+                                    {isSearchingClient ? <Loader2 size={16} className="animate-spin"/> : <CloudDownload size={16}/>}
+                                </button>
+                            </div>
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Teléfono</label>
+                            <input type="text" className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold outline-none focus:border-primary-500 text-sm" value={newClientData.phone} onChange={e => setNewClientData({...newClientData, phone: e.target.value})} placeholder="999 999 999" />
+                        </div>
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Dirección</label>
+                        <input type="text" className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold uppercase outline-none focus:border-primary-500 text-sm" value={newClientData.address} onChange={e => setNewClientData({...newClientData, address: e.target.value})} placeholder="AV. EL SOL 500" />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Departamento</label>
+                            <select className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold text-sm outline-none" value={newClientData.department} onChange={e => setNewClientData({...newClientData, department: e.target.value})}>
+                                {departments.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
+                            </select>
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Provincia</label>
+                            <select className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold text-sm outline-none" value={newClientData.province} onChange={e => setNewClientData({...newClientData, province: e.target.value})}>
+                                {provinces.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+                            </select>
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Distrito</label>
+                            <select className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold text-sm outline-none" value={newClientData.district} onChange={e => setNewClientData({...newClientData, district: e.target.value})}>
+                                <option value="">-- SELECCIONAR --</option>
+                                {districts.map(dist => <option key={dist.id} value={dist.name}>{dist.name}</option>)}
+                            </select>
+                        </div>
+                    </div>
+                    <div className="flex justify-end gap-3 pt-4">
+                        <button onClick={() => setShowClientModal(false)} className="px-8 py-3 text-slate-500 font-black uppercase text-[10px] hover:bg-slate-100 rounded-xl transition-all">Cancelar</button>
+                        <button onClick={handleSaveClient} className="px-10 py-3 bg-primary-600 text-white font-black rounded-xl uppercase text-[10px] tracking-widest shadow-lg hover:bg-primary-700">Guardar Cliente</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+      )}
+
     </div>
   );
 };

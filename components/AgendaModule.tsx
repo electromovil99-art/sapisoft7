@@ -1,22 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Plus, Trash2, Edit3, Lock, Unlock, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Task } from '../types';
+import { Task, SystemUser } from '../types';
 import { fetchDataFromSupabase, syncDataToSupabase, deleteDataFromSupabase, subscribeToSupabaseChanges } from '../services/supabaseService';
 
 export const AgendaModule: React.FC = () => {
     const [tasks, setTasks] = useState<Task[]>([]);
-    const [userId, setUserId] = useState(() => {
+    const [currentUser, setCurrentUser] = useState<SystemUser | null>(() => {
         const sessionStr = localStorage.getItem('app_session');
         if (sessionStr) {
             try {
                 const session = JSON.parse(sessionStr);
-                return session.user?.id || '';
+                return session.user || null;
             } catch (e) {
-                return '';
+                return null;
             }
         }
-        return '';
+        return null;
     });
+    const userId = currentUser?.id || '';
+    const userRole = currentUser?.role || 'VENDEDOR';
     const [filterStatus, setFilterStatus] = useState<'TODAS' | 'PENDIENTE' | 'COMPLETADA'>('TODAS');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingTask, setEditingTask] = useState<Task | null>(null);

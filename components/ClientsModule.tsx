@@ -49,7 +49,7 @@ export const ClientsModule: React.FC<ClientsModuleProps> = ({
 
   const filteredClients = clients.filter(client => {
       const searchWords = normalize(searchTerm).split(" ").filter(w => w !== "");
-      const targetString = normalize(`${client.name} ${client.dni} ${client.phone || ""} ${client.email || ""}`);
+      const targetString = normalize(`${client.name} ${client.dni} ${client.id} ${client.phone || ""} ${client.email || ""}`);
       
       return searchTerm === '' || searchWords.every(word => targetString.includes(word));
   });
@@ -89,8 +89,26 @@ export const ClientsModule: React.FC<ClientsModuleProps> = ({
 
   const handleSave = () => {
       if (!newClientData.name || !newClientData.dni) return alert("Nombre y DNI son obligatorios.");
+      
+      const maxId = clients.reduce((max, c) => Math.max(max, c.id), 0);
+      const nextId = maxId + 1;
+
       const cl: Client = {
-          id: Date.now().toString(), name: newClientData.name.toUpperCase(), dni: newClientData.dni, phone: newClientData.phone, email: newClientData.email, address: newClientData.address, department: newClientData.department, province: newClientData.province, district: newClientData.district, creditLine: 0, creditUsed: 0, totalPurchases: 0, paymentScore: 3, digitalBalance: 0
+          id: nextId, 
+          correlativeId: nextId,
+          name: newClientData.name.toUpperCase(), 
+          dni: newClientData.dni, 
+          phone: newClientData.phone, 
+          email: newClientData.email, 
+          address: newClientData.address, 
+          department: newClientData.department, 
+          province: newClientData.province, 
+          district: newClientData.district, 
+          creditLine: 0, 
+          creditUsed: 0, 
+          totalPurchases: 0, 
+          paymentScore: 3, 
+          digitalBalance: 0
       };
       onAddClient(cl);
       setShowModal(false);
@@ -142,6 +160,7 @@ export const ClientsModule: React.FC<ClientsModuleProps> = ({
                 <table className="hidden md:table w-full text-left">
                     <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-700 text-slate-400 font-black uppercase tracking-widest text-[10px] border-b">
                         <tr>
+                            <th className="px-6 py-4">ID</th>
                             <th className="px-6 py-4">Cliente / Identificación</th>
                             <th className="px-6 py-4">Contacto</th>
                             <th className="px-6 py-4 text-right">Crédito / Deuda</th>
@@ -152,6 +171,11 @@ export const ClientsModule: React.FC<ClientsModuleProps> = ({
                     <tbody className="divide-y divide-slate-50 dark:divide-slate-700/50">
                         {filteredClients.map(client => (
                             <tr key={client.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors">
+                                <td className="px-6 py-4">
+                                    <span className="text-[10px] font-black text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-lg">
+                                        #{client.id}
+                                    </span>
+                                </td>
                                 <td className="px-6 py-4">
                                     <div className="flex items-center gap-3">
                                         <div className="w-9 h-9 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center font-black text-xs">
@@ -213,7 +237,10 @@ export const ClientsModule: React.FC<ClientsModuleProps> = ({
                                         {client.name.substring(0,2).toUpperCase()}
                                     </div>
                                     <div className="min-w-0">
-                                        <div className="font-black text-slate-800 dark:text-white text-xs uppercase truncate">{client.name}</div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[8px] font-black text-slate-400 bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">#{client.id}</span>
+                                            <div className="font-black text-slate-800 dark:text-white text-xs uppercase truncate">{client.name}</div>
+                                        </div>
                                         <div className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
                                             <FileText size={10}/> DNI: {client.dni}
                                         </div>

@@ -284,7 +284,6 @@ const App = () => {
   const [categories, setCategories] = useState<Category[]>(TECH_CATEGORIES);
   const [brands, setBrands] = useState<Brand[]>([{ id: '1', name: 'SAMSUNG' }, { id: '2', name: 'APPLE' }]);
   const [sales, setSales] = useState<SaleRecord[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
   const [purchases, setPurchases] = useState<PurchaseRecord[]>([]);
   const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
   const [cashMovements, setCashMovements] = useState<CashMovement[]>(MOCK_CASH_MOVEMENTS);
@@ -588,7 +587,25 @@ const App = () => {
       setSales(prev => prev.map(s => s.id === ticketId ? { ...s, ...updates } : s));
   };
 
-  const handleProcessSale = async (cart: CartItem[], total: number, docType: string, clientName: string, paymentBreakdown: PaymentBreakdown, ticketId: string, detailedPayments: any[], currency: string, exchangeRate: number) => {
+  const handleFixSalesData = async () => {
+    const salesToFix = sales.filter(s => s.clientId === null || s.clientId === undefined);
+    if (salesToFix.length === 0) {
+      alert("No hay ventas con clientId en null.");
+      return;
+    }
+    
+    const fixedSales = salesToFix.map(s => ({ ...s, clientId: 1 }));
+    
+    // Update local state
+    setSales(prev => prev.map(s => (s.clientId === null || s.clientId === undefined) ? { ...s, clientId: 1 } : s));
+    
+    // Sync to Supabase
+    await syncToSupabase('sales', fixedSales);
+    
+    alert(`Se actualizaron ${salesToFix.length} ventas.`);
+  };
+
+  const handleProcessSale = async (cart: CartItem[], total: number, docType: string, clientName: string, paymentBreakdown: PaymentBreakdown, ticketId: string, detailedPayments: any[], currency: string, exchangeRate: number, clientId?: number) => {
       // Generate Traceability IDs
       const globalId = await getNextGlobalTransactionId();
       
@@ -625,6 +642,7 @@ const App = () => {
           date: new Date().toLocaleDateString('es-PE'),
           time: new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false }),
           clientName,
+          clientId,
           docType,
           total,
           currency,
@@ -972,9 +990,6 @@ const App = () => {
       setServices(prev => [enrichedService, ...prev]);
       syncToSupabase('service_orders', enrichedService);
   };
-  const handleAddTask = (task: Task) => setTasks([...tasks, task]);
-  const handleUpdateTask = (updatedTask: Task) => setTasks(tasks.map(t => t.id === updatedTask.id ? updatedTask : t));
-  const handleDeleteTask = (taskId: string) => setTasks(tasks.filter(t => t.id !== taskId));
   const handleUpdateService = (s: ServiceOrder) => {
       setServices(prev => prev.map(item => item.id === s.id ? s : item));
       syncToSupabase('service_orders', s);
@@ -1223,7 +1238,7 @@ const App = () => {
   };
   
   // NEW: Update Wallet Balance AND Record Cash Movement
-  const handleUpdateClientBalance = (clientId: string, amountChange: number, reason: string, paymentMethod: any, accountId?: string) => {
+  const handleUpdateClientBalance = (clientId: number, amountChange: number, reason: string, paymentMethod: any, accountId?: string) => {
       // Find client name before update for the record concept
       const client = clients.find(c => c.id === clientId);
       const clientName = client ? client.name : 'CLIENTE';
@@ -1550,7 +1565,7 @@ const App = () => {
       {currentView === ViewState.BANK_ACCOUNTS && <BankAccountsModule bankAccounts={bankAccounts} onAddBankAccount={handleAddBankAccount} onUpdateBankAccount={handleUpdateBankAccount} onDeleteBankAccount={handleDeleteBankAccount} onUniversalTransfer={handleUniversalTransfer} />}
       {currentView === ViewState.BANK_HISTORY && <BankHistoryModule cashMovements={cashMovements} bankAccounts={bankAccounts} />}
       {currentView === ViewState.COMPANY_PROFILE && <CompanyProfileModule companyName={companyName} onUpdateCompanyName={setCompanyName} companyLogo={companyLogo} onUpdateLogo={setCompanyLogo} baseCurrency={baseCurrency} onUpdateBaseCurrency={setBaseCurrency} />}
-      {currentView === ViewState.SYSTEM_DIAGNOSTICS && <SystemDiagnosticsModule products={products} cashMovements={cashMovements} stockMovements={stockMovements} onAddCashMovement={handleAddMovement} onAddProduct={handleAddProduct} onProcessSale={handleProcessSale} onProcessPurchase={handleProcessPurchase} onProcessCreditNote={handleProcessCreditNote} onAddService={handleAddService} currentBranchId={currentBranchId} />}
+      {currentView === ViewState.SYSTEM_DIAGNOSTICS && <SystemDiagnosticsModule products={products} cashMovements={cashMovements} stockMovements={stockMovements} onAddCashMovement={handleAddMovement} onAddProduct={handleAddProduct} onProcessSale={handleProcessSale} onProcessPurchase={handleProcessPurchase} onProcessCreditNote={handleProcessCreditNote} onAddService={handleAddService} currentBranchId={currentBranchId} onFixSalesData={handleFixSalesData} />}
       {currentView === ViewState.GATEWAY_CONFIG && <GatewayConfigModule />}
       {currentView === ViewState.BRANCH_MANAGEMENT && <BranchManagementModule branches={branches} onAddBranch={handleAddBranch} onUpdateBranch={handleUpdateBranch} onDeleteBranch={handleDeleteBranch} onCloneBranch={handleCloneBranch} onSwitchBranch={handleSwitchBranch} currentBranchId={currentBranchId} />}
       {currentView === ViewState.WAREHOUSE_TRANSFER && <WarehouseTransferModule branches={branches} currentBranchId={currentBranchId} products={products} onProcessTransfer={(t) => {

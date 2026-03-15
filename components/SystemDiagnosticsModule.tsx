@@ -18,6 +18,7 @@ interface SystemDiagnosticsProps {
     onProcessCreditNote: (originalSaleId: string, itemsToReturn: { itemId: string, quantity: number }[], totalRefund: number, breakdown: PaymentBreakdown, detailedRefunds?: any[]) => void;
     onAddService: (s: ServiceOrder) => void;
     currentBranchId: string;
+    onFixSalesData?: () => void;
 }
 
 const SystemDiagnosticsModule: React.FC<SystemDiagnosticsProps> = ({ 
@@ -30,7 +31,8 @@ const SystemDiagnosticsModule: React.FC<SystemDiagnosticsProps> = ({
     onProcessPurchase,
     onProcessCreditNote,
     onAddService,
-    currentBranchId
+    currentBranchId,
+    onFixSalesData
 }) => {
     const [testLogs, setTestLogs] = useState<{ id: number, name: string, status: 'PENDING' | 'PASS' | 'FAIL', details: string, time: string }[]>([]);
     const [isTesting, setIsTesting] = useState(false);
@@ -194,6 +196,15 @@ const SystemDiagnosticsModule: React.FC<SystemDiagnosticsProps> = ({
                             </div>
                             <h4 className="font-black text-xs uppercase text-slate-800 dark:text-white">Trazabilidad Total (Retrasada)</h4>
                             <p className="text-[10px] text-slate-500 font-bold mt-1 uppercase tracking-tight">Ejecuta operaciones con 3s de desfase para auditar tiempos en el Kardex y WAC.</p>
+                        </div>
+
+                        <div className="p-5 bg-slate-50 dark:bg-slate-900/50 rounded-3xl border border-slate-100 dark:border-slate-700 group hover:border-blue-500/50 transition-all">
+                            <div className="flex justify-between items-start mb-2">
+                                <div className="p-3 bg-white dark:bg-slate-800 rounded-2xl shadow-sm text-blue-600"><Database size={20}/></div>
+                                <button onClick={onFixSalesData} className="p-2 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-blue-600 rounded-xl transition-all"><RotateCcw size={16}/></button>
+                            </div>
+                            <h4 className="font-black text-xs uppercase text-slate-800 dark:text-white">Reparar IDs de Ventas</h4>
+                            <p className="text-[10px] text-slate-500 font-bold mt-1 uppercase tracking-tight">Actualiza ventas con clientId en null al ID 1 (CLIENTE VARIOS).</p>
                         </div>
 
                         <div className="p-5 bg-slate-50 dark:bg-slate-900/50 rounded-3xl border border-slate-100 dark:border-slate-700 group hover:border-blue-500/50 transition-all opacity-50">

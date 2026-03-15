@@ -84,7 +84,7 @@ export const ServicesModule: React.FC<ServicesProps> = ({ services, products, ca
   const getCurrentTime = () => new Date().toLocaleTimeString('es-PE', {hour: '2-digit', minute:'2-digit'});
 
   const [newOrder, setNewOrder] = useState<Partial<ServiceOrder>>({
-      client: '', clientPhone: '', deviceModel: '', issue: '', cost: 0, technician: '', receptionist: 'ADMIN', entryDate: '', entryTime: '', usedProducts: []
+      client: '', clientId: undefined, clientPhone: '', deviceModel: '', issue: '', cost: 0, technician: '', receptionist: 'ADMIN', entryDate: '', entryTime: '', usedProducts: []
   });
 
   const searchClientByDoc = async () => {
@@ -360,7 +360,7 @@ export const ServicesModule: React.FC<ServicesProps> = ({ services, products, ca
   const filteredServices = services.filter(s => {
     const clientObj = clients?.find(c => c.name === s.client);
     const searchWords = normalize(searchTerm).split(" ").filter(w => w !== "");
-    const targetString = normalize(`${s.client} ${s.deviceModel} ${s.id} ${clientObj?.dni || ""}`);
+    const targetString = normalize(`${s.client} ${s.deviceModel} ${s.id} ${clientObj?.dni || ""} ${clientObj?.id || ""}`);
     
     const matchesSearch = searchWords.every(word => targetString.includes(word));
     const matchesStatus = statusFilter === 'Todos' ? true : s.status === statusFilter;
@@ -665,8 +665,8 @@ export const ServicesModule: React.FC<ServicesProps> = ({ services, products, ca
                             <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Cliente</label>
                             <div className="flex gap-2 relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14}/>
-                                <input type="text" className="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl uppercase text-xs font-bold outline-none focus:border-primary-500" placeholder="NOMBRE O DNI..." value={newOrder.client} onChange={e => { const val = e.target.value.toUpperCase(); setNewOrder(prev => ({...prev, client: val})); const found = clients?.find(c => c.name === val || c.dni === val); if (found) setNewOrder(prev => ({...prev, client: found.name, clientPhone: found.phone})); }} list="serv-clients"/>
-                                <datalist id="serv-clients">{clients?.map(c => <option key={c.id} value={c.name}>{c.dni}</option>)}</datalist>
+                                <input type="text" className="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl uppercase text-xs font-bold outline-none focus:border-primary-500" placeholder="NOMBRE, ID O DNI..." value={newOrder.client} onChange={e => { const val = e.target.value.toUpperCase(); setNewOrder(prev => ({...prev, client: val})); const found = clients?.find(c => c.name === val || c.dni === val || c.id.toString() === val); if (found) setNewOrder(prev => ({...prev, client: found.name, clientId: found.id, clientPhone: found.phone})); }} list="serv-clients"/>
+                                <datalist id="serv-clients">{clients?.map(c => <option key={c.id} value={c.name}>{`ID: ${c.id} | DNI: ${c.dni}`}</option>)}</datalist>
                                 <button onClick={() => setShowClientModal(true)} className="p-2.5 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors shadow-sm"><UserPlus size={18}/></button>
                             </div>
                         </div>
@@ -766,6 +766,7 @@ export const ServicesModule: React.FC<ServicesProps> = ({ services, products, ca
                             entryDate: newOrder.entryDate!, 
                             entryTime: newOrder.entryTime!, 
                             client: newOrder.client.toUpperCase(), 
+                            clientId: newOrder.clientId || 1,
                             clientPhone: newOrder.clientPhone || '', 
                             deviceModel: newOrder.deviceModel.toUpperCase(), 
                             issue: newOrder.issue || '', 
@@ -894,7 +895,26 @@ export const ServicesModule: React.FC<ServicesProps> = ({ services, products, ca
                     
                     <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
                         <button onClick={() => setShowClientModal(false)} className="px-10 py-4 sm:py-3 text-slate-500 font-bold hover:bg-slate-100 dark:hover:bg-slate-800 rounded-2xl transition-all uppercase tracking-widest text-xs">Cancelar</button>
-                        <button onClick={() => { if (!newClientData.name || !newClientData.dni) return alert("Nombre y DNI obligatorios."); const cl: Client = { id: Date.now().toString(), name: newClientData.name.toUpperCase(), dni: newClientData.dni, phone: newClientData.phone, creditLine: 0, creditUsed: 0, totalPurchases: 0, paymentScore: 3, digitalBalance: 0 }; if (onAddClient) onAddClient(cl); setNewOrder(prev => ({...prev, client: cl.name, clientPhone: cl.phone})); setShowClientModal(false); }} className="px-12 py-4 sm:py-3 bg-primary-600 text-white font-black rounded-2xl hover:bg-primary-700 shadow-xl transition-all text-xs uppercase tracking-widest">Guardar y Vincular</button>
+                        <button onClick={() => { 
+                            if (!newClientData.name || !newClientData.dni) return alert("Nombre y DNI obligatorios."); 
+                            const maxId = (clients || []).reduce((max, c) => Math.max(max, c.id), 0);
+                            const nextId = maxId + 1;
+                            const cl: Client = { 
+                                id: nextId, 
+                                correlativeId: nextId,
+                                name: newClientData.name.toUpperCase(), 
+                                dni: newClientData.dni, 
+                                phone: newClientData.phone, 
+                                creditLine: 0, 
+                                creditUsed: 0, 
+                                totalPurchases: 0, 
+                                paymentScore: 3, 
+                                digitalBalance: 0 
+                            }; 
+                            if (onAddClient) onAddClient(cl); 
+                            setNewOrder(prev => ({...prev, client: cl.name, clientPhone: cl.phone})); 
+                            setShowClientModal(false); 
+                        }} className="px-12 py-4 sm:py-3 bg-primary-600 text-white font-black rounded-2xl hover:bg-primary-700 shadow-xl transition-all text-xs uppercase tracking-widest">Guardar y Vincular</button>
                     </div>
                 </div>
             </div>

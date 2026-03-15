@@ -59,12 +59,12 @@ export const FIXED_INCOME_CATEGORIES: string[] = ['Membresías', 'Alquiler Subar
 
 export const MOCK_CLIENTS: Client[] = [
   { 
-    id: '1', name: 'CLIENTE VARIOS', dni: '00000000', 
+    id: 1, name: 'CLIENTE VARIOS', dni: '00000000', 
     creditLine: 0, creditUsed: 0, totalPurchases: 1540.50, paymentScore: 3, tags: ['General'], digitalBalance: 0,
     department: 'CUSCO', province: 'CUSCO', district: 'CUSCO'
   },
   { 
-    id: '2', name: 'ALEXANDER GONZALES', dni: '73383858', phone: '933159551', email: 'alex@gmail.com',
+    id: 2, name: 'ALEXANDER GONZALES', dni: '73383858', phone: '933159551', email: 'alex@gmail.com',
     creditLine: 1000, creditUsed: 0, totalPurchases: 2450.00, paymentScore: 5, tags: ['VIP', 'Frecuente'], lastPurchaseDate: formatDate(yesterday), digitalBalance: 150.00,
     department: 'CUSCO', province: 'CUSCO', district: 'WANCHAQ', address: 'Av. La Cultura 200'
   }

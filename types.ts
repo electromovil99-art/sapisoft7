@@ -167,7 +167,8 @@ export interface Product {
 }
 
 export interface Client {
-    id: string;
+    id: number;
+    correlativeId?: number;
     globalId?: string;
     updatedBy?: string;
     name: string;
@@ -225,6 +226,7 @@ export interface SaleRecord {
     date: string;
     time: string;
     clientName: string;
+    clientId?: number;
     docType: string;
     total: number;
     currency: string;
@@ -316,6 +318,7 @@ export interface ServiceOrder {
     entryDate: string;
     entryTime: string;
     client: string;
+    clientId?: number;
     clientPhone?: string;
     deviceModel: string;
     issue: string;
@@ -394,6 +397,7 @@ export interface Quotation {
     date: string;
     time: string;
     clientName: string;
+    clientId?: number;
     items: CartItem[];
     total: number;
 }
@@ -409,6 +413,7 @@ export interface Presale {
     time: string;
     deliveryDate: string;
     clientName: string;
+    clientId?: number;
     items: CartItem[];
     total: number;
     status: 'PENDING' | 'COMPLETED' | 'CANCELLED';
