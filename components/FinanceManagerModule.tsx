@@ -56,7 +56,7 @@ export const FinanceManagerModule: React.FC<FinanceManagerProps> = ({ activeTab,
                         </div>
                         <div>
                             <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">{config.title}</h3>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Defina conceptos recurrentes para su uso en Caja Chica</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Defina conceptos recurrentes para su uso en Caja</p>
                         </div>
                     </div>
                     <div className="text-right">
@@ -113,7 +113,7 @@ export const FinanceManagerModule: React.FC<FinanceManagerProps> = ({ activeTab,
                         <Settings2 size={16}/>
                     </div>
                     <p className="text-[9px] font-bold text-slate-400 uppercase leading-relaxed tracking-tighter max-w-2xl">
-                        Estas categorías estarán disponibles en el módulo de Caja Chica al registrar un {config.label} de tipo "Fijo", permitiendo una clasificación más precisa de sus gastos e ingresos recurrentes.
+                        Estas categorías estarán disponibles en el módulo de Caja al registrar un {config.label} de tipo "Fijo", permitiendo una clasificación más precisa de sus gastos e ingresos recurrentes.
                     </p>
                 </div>
             </div>

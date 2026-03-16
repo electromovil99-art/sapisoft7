@@ -61,7 +61,7 @@ export const INITIAL_NAV_STRUCTURE = [
     icon: Wallet,
     enabled: true,
     items: [
-      { view: ViewState.CASH, label: 'Caja Chica', icon: Wallet, enabled: true },
+      { view: ViewState.CASH, label: 'Caja', icon: Wallet, enabled: true },
       { view: ViewState.CASH_TRANSFERS, label: 'Transf. Caja', icon: ArrowRightLeft, enabled: true },
       { view: ViewState.BANK_ACCOUNTS, label: 'Ctas. Banco', icon: Landmark, enabled: true },
       { view: ViewState.BANK_HISTORY, label: 'Mov. Banco', icon: History, enabled: true },

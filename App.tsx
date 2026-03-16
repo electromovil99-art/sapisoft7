@@ -464,16 +464,22 @@ const App = () => {
   }, []);
 
   const addToOfflineQueue = (tableName: string, data: any, isDelete: boolean) => {
-      const queue = JSON.parse(localStorage.getItem('supabase_sync_queue') || '[]');
-      queue.push({
-          id: Date.now().toString() + Math.random().toString(),
-          tableName,
-          data,
-          isDelete,
-          timestamp: Date.now()
-      });
-      localStorage.setItem('supabase_sync_queue', JSON.stringify(queue));
-      setPendingSyncCount(queue.length);
+      try {
+          const queue = JSON.parse(localStorage.getItem('supabase_sync_queue') || '[]');
+          queue.push({
+              id: Date.now().toString() + Math.random().toString(),
+              tableName,
+              data,
+              isDelete,
+              timestamp: Date.now()
+          });
+          // Limit queue size to prevent QuotaExceededError
+          if (queue.length > 1000) queue.shift();
+          localStorage.setItem('supabase_sync_queue', JSON.stringify(queue));
+          setPendingSyncCount(queue.length);
+      } catch (e) {
+          console.error("Error adding to offline queue:", e);
+      }
   };
 
   const processOfflineQueue = async () => {

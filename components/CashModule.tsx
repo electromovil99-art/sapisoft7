@@ -400,6 +400,9 @@ export const CashModule: React.FC<CashModuleProps> = ({
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [selectedMovement, setSelectedMovement] = useState<any>(null);
   const [filter, setFilter] = useState<'ALL' | 'CASH' | 'DIGITAL'>('ALL');
+  const [timeFilter, setTimeFilter] = useState<'SHIFT' | 'ALL' | 'CUSTOM'>('SHIFT');
+  const [startDate, setStartDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [amount, setAmount] = useState('');
   const [concept, setConcept] = useState('');
   const [category, setCategory] = useState('');
@@ -410,16 +413,28 @@ export const CashModule: React.FC<CashModuleProps> = ({
   const [transferData, setTransferData] = useState({ from: 'CASH', to: '', amount: '', rate: '1.0', reference: '', operationNumber: '' });
   
   const [printFormat, setPrintFormat] = useState<'80mm' | 'A4'>('80mm');
+  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
+
+  const handleSort = (key: string) => {
+      let direction: 'asc' | 'desc' = 'asc';
+      if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+          direction = 'desc';
+      }
+      setSortConfig({ key, direction });
+  };
+
+  const SortIcon = ({ columnKey }: { columnKey: string }) => {
+      if (!sortConfig || sortConfig.key !== columnKey) return null;
+      return <span className="text-blue-600 ml-1 text-[10px]">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>;
+  };
 
   const todayStr = formatDate();
 
   const activeMovements = useMemo(() => {
-      if (!currentSession) return [];
-      
       const normalizeDate = (d: string) => {
           if (!d) return '';
           // Unify separators and take only the date part
-          const clean = d.split(' ')[0].replace(/-/g, '/');
+          const clean = d.split('T')[0].split(' ')[0].replace(/-/g, '/');
           const parts = clean.split('/');
           
           if (parts.length === 3) {
@@ -434,22 +449,63 @@ export const CashModule: React.FC<CashModuleProps> = ({
       };
 
       const normalizedToday = normalizeDate(todayStr);
-      const normalizedSessionDate = normalizeDate(currentSession.openingDate);
+      const normalizedSessionDate = currentSession ? normalizeDate(currentSession.openingDate) : normalizedToday;
 
       return movements.filter(m => {
-          const normalizedMDate = normalizeDate(m.date);
           const isCorrectBranch = !m.branchId || !currentBranchId || m.branchId === currentBranchId;
-          const isCorrectDate = normalizedMDate === normalizedToday || normalizedMDate === normalizedSessionDate;
-          return isCorrectBranch && isCorrectDate;
+          if (!isCorrectBranch) return false;
+
+          const normalizedMDate = normalizeDate(m.date);
+
+          if (timeFilter === 'SHIFT') {
+              if (!currentSession) return false;
+              return normalizedMDate === normalizedToday || normalizedMDate === normalizedSessionDate;
+          } else if (timeFilter === 'ALL') {
+              return true;
+          } else if (timeFilter === 'CUSTOM') {
+              const parts = normalizedMDate.split('/');
+              if (parts.length === 3) {
+                  // parts is DD/MM/YYYY
+                  const mTime = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0])).getTime();
+                  const start = new Date(startDate + 'T00:00:00').getTime();
+                  const end = new Date(endDate + 'T23:59:59').getTime();
+                  return mTime >= start && mTime <= end;
+              }
+              return false;
+          }
+          return true;
       });
-  }, [movements, todayStr, currentSession, currentBranchId]);
+  }, [movements, todayStr, currentSession, currentBranchId, timeFilter, startDate, endDate]);
 
   const displayedMovements = useMemo(() => {
       let filtered = [...activeMovements];
       if (filter === 'CASH') filtered = filtered.filter(m => m.paymentMethod === 'Efectivo');
       if (filter === 'DIGITAL') filtered = filtered.filter(m => m.paymentMethod !== 'Efectivo');
       
-      const chronoSorted = [...filtered].sort((a, b) => a.time.localeCompare(b.time));
+      const parseDateForSort = (d: string, t: string) => {
+          if (!d) return '';
+          const parts = d.includes('/') ? d.split('/') : d.split('-');
+          if (parts.length === 3) {
+              let yyyy, mm, dd;
+              if (parts[0].length === 4) {
+                  yyyy = parts[0];
+                  mm = parts[1].padStart(2, '0');
+                  dd = parts[2].padStart(2, '0');
+              } else {
+                  dd = parts[0].padStart(2, '0');
+                  mm = parts[1].padStart(2, '0');
+                  yyyy = parts[2];
+              }
+              return `${yyyy}-${mm}-${dd}T${t}`;
+          }
+          return `${d}T${t}`;
+      };
+
+      const chronoSorted = [...filtered].sort((a, b) => {
+          const dateA = parseDateForSort(a.date, a.time);
+          const dateB = parseDateForSort(b.date, b.time);
+          return dateA.localeCompare(dateB);
+      });
       const runningBalances: Record<string, number> = { 'CASH': currentSession?.countedOpening || 0 };
       
       bankAccounts.forEach(acc => {
@@ -459,7 +515,7 @@ export const CashModule: React.FC<CashModuleProps> = ({
       let ingresoCount = 0;
       let egresoCount = 0;
       
-      return chronoSorted.map(m => {
+      const withBalances = chronoSorted.map(m => {
           const targetId = m.accountId || 'CASH';
           let sequentialId = "";
           
@@ -478,7 +534,49 @@ export const CashModule: React.FC<CashModuleProps> = ({
           
           return { ...m, sequentialId, accumulatedBalance: runningBalances[targetId] };
       });
-  }, [activeMovements, filter, bankAccounts, currentSession]);
+
+      if (sortConfig) {
+          withBalances.sort((a, b) => {
+              let aValue: any = a[sortConfig.key as keyof typeof a];
+              let bValue: any = b[sortConfig.key as keyof typeof b];
+
+              if (sortConfig.key === 'sequentialId') {
+                  const [prefixA, numA] = a.sequentialId.split('-');
+                  const [prefixB, numB] = b.sequentialId.split('-');
+                  if (prefixA !== prefixB) {
+                      return sortConfig.direction === 'asc' ? prefixA.localeCompare(prefixB) : prefixB.localeCompare(prefixA);
+                  }
+                  aValue = parseInt(numA || '0', 10);
+                  bValue = parseInt(numB || '0', 10);
+              } else if (sortConfig.key === 'globalId') {
+                  aValue = parseInt(a.globalId || '0', 10);
+                  bValue = parseInt(b.globalId || '0', 10);
+              } else if (sortConfig.key === 'receipt') {
+                  const compMatchA = a.concept.trim().match(/(?:#\s*)?([A-Z0-9]+-\d+|\d+)$/);
+                  aValue = compMatchA ? compMatchA[1] : '';
+                  const compMatchB = b.concept.trim().match(/(?:#\s*)?([A-Z0-9]+-\d+|\d+)$/);
+                  bValue = compMatchB ? compMatchB[1] : '';
+              } else if (sortConfig.key === 'concept') {
+                  const compMatchA = a.concept.trim().match(/(?:#\s*)?([A-Z0-9]+-\d+|\d+)$/);
+                  aValue = compMatchA ? a.concept.replace(/(?:#\s*)?([A-Z0-9]+-\d+|\d+)$/, '').trim() : a.concept;
+                  const compMatchB = b.concept.trim().match(/(?:#\s*)?([A-Z0-9]+-\d+|\d+)$/);
+                  bValue = compMatchB ? b.concept.replace(/(?:#\s*)?([A-Z0-9]+-\d+|\d+)$/, '').trim() : b.concept;
+              } else if (sortConfig.key === 'date') {
+                  aValue = parseDateForSort(a.date, a.time);
+                  bValue = parseDateForSort(b.date, b.time);
+              } else if (sortConfig.key === 'amount') {
+                  aValue = a.type === 'Ingreso' ? a.amount : -a.amount;
+                  bValue = b.type === 'Ingreso' ? b.amount : -b.amount;
+              }
+
+              if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+              if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+              return 0;
+          });
+      }
+
+      return withBalances;
+  }, [activeMovements, filter, bankAccounts, currentSession, sortConfig]);
 
   const bankBalancesInfo = useMemo(() => {
     return bankAccounts.map(acc => {
@@ -531,14 +629,14 @@ export const CashModule: React.FC<CashModuleProps> = ({
   const getLinkedRecord = (m: any) => {
     const conceptUpper = (m.concept || "").toUpperCase();
     if (conceptUpper.includes("VENTA")) {
-        const saleIdMatch = conceptUpper.match(/#([A-Z0-9-]+)/);
+        const saleIdMatch = conceptUpper.match(/VENTA\s+(?:#\s*)?([A-Z0-9-]+)/);
         if (saleIdMatch) {
             const sale = salesHistory.find(s => s.id === saleIdMatch[1] || s.correlativeId === saleIdMatch[1]);
             if (sale) return { ...sale, type: 'SALE' as const };
         }
     }
     if (conceptUpper.includes("COMPRA")) {
-        const purchaseIdMatch = conceptUpper.match(/#([A-Z0-9-]+)/);
+        const purchaseIdMatch = conceptUpper.match(/COMPRA\s+(?:#\s*)?([A-Z0-9-]+)/);
         if (purchaseIdMatch) {
             const purchase = purchasesHistory.find(p => p.id === purchaseIdMatch[1]);
             if (purchase) return { ...purchase, type: 'PURCHASE' as const };
@@ -660,10 +758,24 @@ export const CashModule: React.FC<CashModuleProps> = ({
 
         <div className="flex-1 flex flex-col bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 overflow-hidden shadow-sm min-h-0">
              <div className="px-4 py-2.5 border-b flex flex-col md:flex-row justify-between items-center bg-slate-50/50 gap-3">
-                <div className="flex items-center gap-3 w-full md:w-auto">
-                    <h3 className="font-black text-xs text-slate-700 uppercase tracking-wider whitespace-nowrap">Flujo de Turno ({displayedMovements.length}/{movements.length})</h3>
+                <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                    <h3 className="font-black text-xs text-slate-700 uppercase tracking-wider whitespace-nowrap">
+                        {timeFilter === 'SHIFT' ? 'Flujo de Turno' : timeFilter === 'ALL' ? 'Historial Total' : 'Rango de Fechas'} ({displayedMovements.length}/{movements.length})
+                    </h3>
+                    <select value={timeFilter} onChange={e => setTimeFilter(e.target.value as any)} className="flex-1 md:flex-none bg-white border rounded text-[10px] py-1 font-bold uppercase px-2 outline-none">
+                        <option value="SHIFT">Turno Actual</option>
+                        <option value="ALL">Total Histórico</option>
+                        <option value="CUSTOM">Rango de Fechas</option>
+                    </select>
+                    {timeFilter === 'CUSTOM' && (
+                        <div className="flex items-center gap-1">
+                            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="bg-white border rounded text-[10px] py-1 px-2 outline-none" />
+                            <span className="text-xs font-bold">-</span>
+                            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="bg-white border rounded text-[10px] py-1 px-2 outline-none" />
+                        </div>
+                    )}
                     <select value={filter} onChange={e => setFilter(e.target.value as any)} className="flex-1 md:flex-none bg-white border rounded text-[10px] py-1 font-bold uppercase px-2 outline-none">
-                        <option value="ALL">Todo</option><option value="CASH">Efectivo</option><option value="DIGITAL">Digital</option>
+                        <option value="ALL">Todos los Métodos</option><option value="CASH">Efectivo</option><option value="DIGITAL">Digital</option>
                     </select>
                 </div>
                 <div className="flex flex-wrap items-center justify-center gap-2 w-full md:w-auto">
@@ -677,29 +789,38 @@ export const CashModule: React.FC<CashModuleProps> = ({
             <div className="flex-1 overflow-auto">
                 {/* Mobile Movements View */}
                 <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
-                    {displayedMovements.map(m => (
-                        <div key={m.id} className="p-4 bg-white dark:bg-slate-900 flex flex-col gap-2">
-                            <div className="flex justify-between items-start">
-                                <div className="flex flex-col">
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{m.sequentialId} • {m.time}</span>
-                                    <span className="text-xs font-black text-slate-800 dark:text-white uppercase leading-tight mt-1">{m.concept}</span>
+                    {displayedMovements.map(m => {
+                        const linked = getLinkedRecord(m);
+                        const receiptNumber = linked ? (linked.correlativeId || linked.id) : '';
+                        const compMatch = m.concept.trim().match(/(?:#\s*)?([A-Z0-9]+-\d+|\d+)$/);
+                        const compNumber = receiptNumber || (compMatch ? compMatch[1] : '');
+                        const cleanConcept = compMatch ? m.concept.replace(/(?:#\s*)?([A-Z0-9]+-\d+|\d+)$/, '').trim() : m.concept;
+                        
+                        return (
+                            <div key={m.id} className="p-4 bg-white dark:bg-slate-900 flex flex-col gap-2">
+                                <div className="flex justify-between items-start">
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{m.sequentialId} • {m.date} {m.time}</span>
+                                        <span className="text-xs font-black text-slate-800 dark:text-white uppercase leading-tight mt-1">{cleanConcept}</span>
+                                    </div>
+                                    <div className={`text-right font-black text-sm ${m.type === 'Ingreso' ? 'text-emerald-600' : 'text-red-500'}`}>
+                                        {m.type === 'Ingreso' ? '+' : '-'} {m.amount.toFixed(2)}
+                                    </div>
                                 </div>
-                                <div className={`text-right font-black text-sm ${m.type === 'Ingreso' ? 'text-emerald-600' : 'text-red-500'}`}>
-                                    {m.type === 'Ingreso' ? '+' : '-'} {m.amount.toFixed(2)}
+                                <div className="flex justify-between items-center mt-1">
+                                    <div className="flex gap-2 items-center">
+                                        <span className="text-[9px] font-bold bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-500 uppercase">{m.paymentMethod}</span>
+                                        {compNumber && <span className="text-[9px] font-mono text-slate-500 uppercase">Comp: {compNumber}</span>}
+                                        {m.referenceId && <span className="text-[9px] font-mono text-primary-600 uppercase">Op: {m.referenceId}</span>}
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-[10px] font-mono font-black text-slate-400">S/ {m.accumulatedBalance?.toFixed(2)}</span>
+                                        <button onClick={() => setSelectedMovement(m)} className="p-1.5 text-slate-300 hover:text-primary-600 transition-all"><Eye size={18}/></button>
+                                    </div>
                                 </div>
                             </div>
-                            <div className="flex justify-between items-center mt-1">
-                                <div className="flex gap-2 items-center">
-                                    <span className="text-[9px] font-bold bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-500 uppercase">{m.paymentMethod}</span>
-                                    {m.referenceId && <span className="text-[9px] font-mono text-primary-600 uppercase">{m.referenceId}</span>}
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <span className="text-[10px] font-mono font-black text-slate-400">S/ {m.accumulatedBalance?.toFixed(2)}</span>
-                                    <button onClick={() => setSelectedMovement(m)} className="p-1.5 text-slate-300 hover:text-primary-600 transition-all"><Eye size={18}/></button>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
 
                 {/* Desktop Table View */}
@@ -707,50 +828,80 @@ export const CashModule: React.FC<CashModuleProps> = ({
                     <table className="w-full text-xs text-left">
                         <thead className="bg-slate-50 text-slate-400 font-black uppercase border-b sticky top-0 z-10">
                             <tr>
-                                <th className="px-4 py-3 w-20">ID Trans.</th>
-                                <th className="px-4 py-3 w-40">Global ID</th>
-                                <th className="px-4 py-3 w-20">Hora</th>
-                                <th className="px-4 py-3 flex-1 min-w-[200px]">Concepto</th>
-                                <th className="px-4 py-3 w-28">Metodo</th>
-                                <th className="px-4 py-3 w-28">Nro Venta</th>
-                                <th className="px-4 py-3 w-28">Nro Operación</th>
-                                <th className="px-4 py-3 text-right w-28">Importe</th>
-                                <th className="px-4 py-3 text-right w-32 bg-slate-100">Saldo Acum.</th>
+                                <th className="px-4 py-3 w-20 whitespace-nowrap cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('sequentialId')}>
+                                    ID Trans. <SortIcon columnKey="sequentialId" />
+                                </th>
+                                <th className="px-4 py-3 w-40 whitespace-nowrap cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('globalId')}>
+                                    Global ID <SortIcon columnKey="globalId" />
+                                </th>
+                                <th className="px-4 py-3 w-24 whitespace-nowrap cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('date')}>
+                                    Fecha <SortIcon columnKey="date" />
+                                </th>
+                                <th className="px-4 py-3 w-20 whitespace-nowrap cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('time')}>
+                                    Hora <SortIcon columnKey="time" />
+                                </th>
+                                <th className="px-4 py-3 flex-1 min-w-[200px] whitespace-nowrap cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('concept')}>
+                                    Concepto <SortIcon columnKey="concept" />
+                                </th>
+                                <th className="px-4 py-3 w-28 whitespace-nowrap cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('receipt')}>
+                                    Comprobante <SortIcon columnKey="receipt" />
+                                </th>
+                                <th className="px-4 py-3 w-28 whitespace-nowrap cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('referenceId')}>
+                                    Nro Operación <SortIcon columnKey="referenceId" />
+                                </th>
+                                <th className="px-4 py-3 w-28 whitespace-nowrap cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('paymentMethod')}>
+                                    Metodo <SortIcon columnKey="paymentMethod" />
+                                </th>
+                                <th className="px-4 py-3 text-right w-28 whitespace-nowrap cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('amount')}>
+                                    Importe <SortIcon columnKey="amount" />
+                                </th>
+                                <th className="px-4 py-3 text-right w-32 bg-slate-100 whitespace-nowrap cursor-pointer hover:bg-slate-200 transition-colors" onClick={() => handleSort('accumulatedBalance')}>
+                                    Saldo Acum. <SortIcon columnKey="accumulatedBalance" />
+                                </th>
                                 <th className="px-4 py-3 text-center w-12"></th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                             {displayedMovements.length === 0 ? (
                                 <tr>
-                                    <td colSpan={10} className="px-4 py-10 text-center text-slate-400 font-bold uppercase text-[10px] tracking-widest">
+                                    <td colSpan={11} className="px-4 py-10 text-center text-slate-400 font-bold uppercase text-[10px] tracking-widest">
                                         No hay movimientos registrados para esta sesión
                                         <div className="mt-2 text-[8px] opacity-50 lowercase">
                                             debug: raw={movements.length} active={activeMovements.length} branch={currentBranchId} today={todayStr}
                                         </div>
                                     </td>
                                 </tr>
-                            ) : displayedMovements.map(m => (
-                                <tr key={m.id} className="hover:bg-slate-50 transition-colors">
-                                    <td className="px-4 py-3 font-black text-slate-400 tracking-tighter text-xs">{m.sequentialId}</td>
-                                    <td className="px-4 py-3 font-mono text-slate-500 text-[10px]">{m.globalId ? m.globalId.substring(0, 8) : '---'}</td>
-                                    <td className="px-4 py-3 font-bold text-slate-500 text-xs">{m.time}</td>
-                                    <td className="px-4 py-3 font-black uppercase text-slate-800 dark:text-slate-200">
-                                        <div className="truncate max-w-[450px] text-xs">{m.concept}</div>
-                                    </td>
-                                    <td className="px-4 py-3 font-bold uppercase text-slate-600 text-[11px]">{m.paymentMethod}</td>
-                                    <td className="px-4 py-3 font-mono text-slate-600 uppercase text-xs">
-                                        {m.concept.includes('VENTA') && m.concept.includes('#') ? m.concept.split('#')[1] : ''}
-                                    </td>
-                                    <td className="px-4 py-3 font-mono text-primary-600 uppercase text-xs">{m.referenceId || ''}</td>
-                                    <td className={`px-4 py-3 text-right font-black text-sm ${m.type === 'Ingreso' ? 'text-emerald-600' : 'text-red-500'}`}>
-                                        {m.type === 'Ingreso' ? '+' : '-'} {m.amount.toFixed(2)}
-                                    </td>
-                                    <td className="px-4 py-3 text-right font-mono font-black bg-slate-50/50 text-sm">S/ {m.accumulatedBalance?.toFixed(2)}</td>
-                                    <td className="px-4 py-3 text-center">
-                                        <button onClick={() => setSelectedMovement(m)} className="p-1.5 text-slate-300 hover:text-primary-600 transition-all"><Eye size={18}/></button>
-                                    </td>
-                                </tr>
-                            ))}
+                            ) : displayedMovements.map(m => {
+                                const linked = getLinkedRecord(m);
+                                const receiptNumber = linked ? (linked.correlativeId || linked.id) : '';
+                                const compMatch = m.concept.trim().match(/(?:#\s*)?([A-Z0-9]+-\d+|\d+)$/);
+                                const compNumber = receiptNumber || (compMatch ? compMatch[1] : '');
+                                const cleanConcept = compMatch ? m.concept.replace(/(?:#\s*)?([A-Z0-9]+-\d+|\d+)$/, '').trim() : m.concept;
+
+                                return (
+                                    <tr key={m.id} className="hover:bg-slate-50 transition-colors">
+                                        <td className="px-4 py-3 font-black text-slate-400 tracking-tighter text-xs">{m.sequentialId}</td>
+                                        <td className="px-4 py-3 font-mono text-slate-500 text-[10px]">{m.globalId ? m.globalId.substring(0, 8) : '---'}</td>
+                                        <td className="px-4 py-3 font-bold text-slate-500 text-xs">{m.date}</td>
+                                        <td className="px-4 py-3 font-bold text-slate-500 text-xs">{m.time}</td>
+                                        <td className="px-4 py-3 font-black uppercase text-slate-800 dark:text-slate-200">
+                                            <div className="truncate max-w-[450px] text-xs">{cleanConcept}</div>
+                                        </td>
+                                        <td className="px-4 py-3 font-mono text-slate-600 uppercase text-xs">
+                                            {compNumber}
+                                        </td>
+                                        <td className="px-4 py-3 font-mono text-primary-600 uppercase text-xs">{m.referenceId || ''}</td>
+                                        <td className="px-4 py-3 font-bold uppercase text-slate-600 text-[11px]">{m.paymentMethod}</td>
+                                        <td className={`px-4 py-3 text-right font-black text-sm ${m.type === 'Ingreso' ? 'text-emerald-600' : 'text-red-500'}`}>
+                                            {m.type === 'Ingreso' ? '+' : '-'} {m.amount.toFixed(2)}
+                                        </td>
+                                        <td className="px-4 py-3 text-right font-mono font-black bg-slate-50/50 text-sm">S/ {m.accumulatedBalance?.toFixed(2)}</td>
+                                        <td className="px-4 py-3 text-center">
+                                            <button onClick={() => setSelectedMovement(m)} className="p-1.5 text-slate-300 hover:text-primary-600 transition-all"><Eye size={18}/></button>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>
@@ -981,6 +1132,36 @@ export const CashModule: React.FC<CashModuleProps> = ({
                                     </div>
                                     <div className="mt-4 text-center italic text-[8px] text-black font-bold uppercase">Copia Cliente</div>
                                 </div>
+                            ) : linkedRecord && linkedRecord.type === 'PURCHASE' ? (
+                                <div className="bg-white w-[280px] p-6 shadow-sm font-mono text-[10px] text-black mx-auto shrink-0 tabular-nums border-x border-slate-200">
+                                    <div className="text-center mb-4 pb-2 border-b-2 border-dashed border-black">
+                                        <h2 className="font-bold text-xs uppercase tracking-tighter">SapiSoft ERP</h2>
+                                        <p className="text-[8px] text-black font-bold uppercase">GESTIÓN DE COMPRAS</p>
+                                    </div>
+                                    <div className="mb-3 space-y-0.5 text-black">
+                                        <div className="flex justify-between"><span>Orden:</span> <span className="font-bold">#{linkedRecord.id}</span></div>
+                                        {linkedRecord.globalId && <div className="flex justify-between"><span>SaaS ID:</span> <span className="font-bold">#{linkedRecord.globalId}</span></div>}
+                                        <div className="flex justify-between"><span>Fecha:</span> <span className="font-bold">{linkedRecord.date}</span></div>
+                                        <div className="flex justify-between"><span>Proveedor:</span> <span className="font-bold truncate max-w-[150px]">{linkedRecord.supplierName || 'Proveedor'}</span></div>
+                                        <div className="flex justify-between"><span>Doc:</span> <span className="uppercase font-bold">{linkedRecord.docType}</span></div>
+                                        <div className="flex justify-between"><span>Condición:</span> <span className="font-black uppercase">{linkedRecord.paymentCondition}</span></div>
+                                    </div>
+                                    <div className="border-y border-dashed border-black py-2 mb-3">
+                                        <div className="grid grid-cols-[1fr_22px_40px_45px] font-black text-[8px] mb-1 border-b border-black pb-1 uppercase text-black"><span>Articulo</span><span className="text-center">Cant</span><span className="text-right">Unit</span><span className="text-right">Total</span></div>
+                                        {linkedRecord.items.map((item: CartItem, idx: number) => (
+                                            <div key={idx} className="grid grid-cols-[1fr_22px_40px_45px] mb-1 last:mb-0 leading-tight text-black">
+                                                <span className="uppercase truncate pr-1 font-bold">{item.name}</span>
+                                                <span className="text-center font-black">{item.quantity}</span>
+                                                <span className="text-right font-medium">{item.price.toFixed(0)}</span>
+                                                <span className="text-right font-black">{(item.price * item.quantity).toFixed(0)}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="space-y-1 mb-4 border-b-2 border-black pb-2 text-black font-black">
+                                        <div className="flex justify-between text-xs"><span>TOTAL COMPRA</span><span>{linkedRecord.total.toFixed(2)}</span></div>
+                                    </div>
+                                    <div className="mt-6 text-center italic text-[8px] text-black font-bold uppercase border-t border-black pt-2">Registro de Compra - Control Interno</div>
+                                </div>
                             ) : (
                                 // DEFAULT MOVEMENT TICKET
                                 <div className="bg-white w-[280px] p-6 shadow-sm font-mono text-[10px] text-black mx-auto shrink-0 tabular-nums border-x border-slate-200">
@@ -1022,9 +1203,9 @@ export const CashModule: React.FC<CashModuleProps> = ({
                                     <div className="bg-slate-50 p-4 rounded-xl border border-slate-200"><p className="text-[9px] font-black text-blue-600 uppercase mb-2 border-b pb-1">Datos Financieros</p><p><strong>Método:</strong> {selectedMovement.paymentMethod}</p>{selectedMovement.referenceId && <p><strong>Nro. Op:</strong> {selectedMovement.referenceId}</p>}<p><strong>Categoría:</strong> {selectedMovement.category}</p></div>
                                 </div>
                                 
-                                {linkedRecord && linkedRecord.type === 'SALE' ? (
+                                {linkedRecord && (linkedRecord.type === 'SALE' || linkedRecord.type === 'PURCHASE') ? (
                                     <>
-                                        <h3 className="font-black text-sm uppercase mb-4 border-b pb-2">Detalle de Items Vendidos</h3>
+                                        <h3 className="font-black text-sm uppercase mb-4 border-b pb-2">Detalle de Items {linkedRecord.type === 'SALE' ? 'Vendidos' : 'Comprados'}</h3>
                                         <table className="w-full border-collapse mb-8"><thead><tr className="bg-blue-600 text-white"><th className="p-2 text-left text-[8px] uppercase">Producto</th><th className="p-2 text-center text-[8px] uppercase">Cant.</th><th className="p-2 text-right text-[8px] uppercase">P. Unit</th><th className="p-2 text-right text-[8px] uppercase">Total</th></tr></thead><tbody>{linkedRecord.items.map((item: CartItem, i: number) => (<tr key={i} className="border-b border-slate-100"><td className="p-2 uppercase font-bold">{item.name}</td><td className="p-2 text-center font-black">{item.quantity}</td><td className="p-2 text-right">{item.price.toFixed(2)}</td><td className="p-2 text-right font-black">{(item.price * item.quantity).toFixed(2)}</td></tr>))}</tbody></table>
                                     </>
                                 ) : (
